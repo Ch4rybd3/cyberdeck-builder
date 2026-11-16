@@ -468,6 +468,7 @@ const ACC_LABEL: Record<Accessory['kind'], string> = {
   gland: 'Cable gland',
   grommet: 'Grommet',
   tiepoint: 'Tie point',
+  kickstand: 'Kickstand',
   picatinny: 'Picatinny rail',
   handle: 'Handle',
   foot: 'Foot',
@@ -694,7 +695,7 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
             <SelectField label="Face" value={acc.face} options={FACE_OPTS} onChange={v => set('face', t => void (t.face = v))} />
             <NumberField label="Offset u" unit="mm" value={acc.u} min={-size.u / 2} max={size.u / 2} onChange={v => set('u', t => void (t.u = v))} />
             <NumberField label="Offset v" unit="mm" value={acc.v} min={-size.v / 2} max={size.v / 2} onChange={v => set('v', t => void (t.v = v))} />
-            {!isPort && acc.kind !== 'foot' && acc.kind !== 'gland' && acc.kind !== 'grommet' && acc.kind !== 'tiepoint' && <NumberField label="Length" unit="mm" value={acc.length} min={acc.kind === 'handle' ? 80 : 30} onChange={v => set('length', t => void (t.length = v))} />}
+            {!isPort && acc.kind !== 'foot' && acc.kind !== 'gland' && acc.kind !== 'grommet' && acc.kind !== 'tiepoint' && acc.kind !== 'kickstand' && <NumberField label="Length" unit="mm" value={acc.length} min={acc.kind === 'handle' ? 80 : 30} onChange={v => set('length', t => void (t.length = v))} />}
           </Grid2>
           <Field2 label="Orientation">
             <Segmented value={acc.rotation} onChange={v => set('rot', t => void (t.rotation = v))} options={[{ value: 0, label: 'Along u' }, { value: 90, label: 'Along v' }]} />
@@ -708,6 +709,12 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
               options={(Object.keys(GLANDS) as (keyof typeof GLANDS)[]).map(g => ({ value: g, label: `${g} — hole Ø${GLANDS[g].hole} mm, cable ${GLANDS[g].cable}` }))}
               onChange={v => set('gland', t => void (t.gland = v))}
             />
+          )}
+          {acc.kind === 'kickstand' && (
+            <Grid2>
+              <NumberField label="Leg length" unit="mm" value={acc.length} min={40} onChange={v => set('length', t => void (t.length = v))} />
+              <NumberField label="Leg width" unit="mm" value={acc.width ?? 40} min={20} onChange={v => set('width', t => void (t.width = v))} />
+            </Grid2>
           )}
           {acc.kind === 'grommet' && (
             <Grid2>
@@ -753,7 +760,9 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
                 ? `Rail clamp: ${RAIL_MOUNT.length} × ${RAIL_MOUNT.width} mm, slides onto a Picatinny rail and locks with an M4 cross bolt in a slot. Four M3 screws hold it to this face; the module face ends up ${RAIL_MOUNT.standoff} mm from the Core.`
                 : `Module plug: a ${SOCKET.recess.w - 0.4} × ${SOCKET.recess.h - 0.4} mm key that seats in the Core recess, a connector window and four M3 clearance holes. Screws go from inside the module into the Core's inserts.`
               : `Core socket: ${SOCKET.width} × ${SOCKET.height} mm footprint, ${SOCKET.recess.depth} mm alignment recess, ${SOCKET.connectorWindow.w} × ${SOCKET.connectorWindow.h} mm connector window and four M3 heat-set inserts.`
-            : acc.kind === 'gland'
+            : acc.kind === 'kickstand'
+              ? 'A hinge bolted under the case with two M3 screws into inserts, and a leg that folds flat and swings down on an M3 bolt with a nyloc nut. Tighten the nut until the leg holds its angle. Put the hinge near the back so the deck tilts towards you; use “Kickstand” in the toolbar to check it.'
+              : acc.kind === 'gland'
               ? 'A threaded cable gland screws into the hole from outside and is held by its locknut inside. It seals the cable and takes the strain off its connector.'
               : acc.kind === 'grommet'
                 ? 'A rounded slot through the wall, and a flexible grommet to print in TPU: its flange sits outside, its lip snaps behind the wall, and the cable pushes through a slit membrane.'

@@ -97,6 +97,10 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
       const spec = GLANDS[g as keyof typeof GLANDS]
       lines.push({ key: `h:gland-${g}`, category: 'Hardware', name: `Cable gland ${g} with locknut, nylon, IP68`, qty: n, unit: 'pcs', unitPrice: spec.price, supplier: 'Any', note: `Cable ${spec.cable}` })
     }
+    const kick = new Map<number, number>()
+    for (const l of geo.hardware.kickstandBolts) kick.set(l, (kick.get(l) ?? 0) + 1)
+    for (const [l, n] of kick)
+      lines.push({ key: `h:kick-${l}`, category: 'Hardware', name: `M3 × ${l} socket head bolt + M3 nyloc nut`, qty: n, unit: 'sets', unitPrice: 0.25, supplier: 'Any', note: 'Kickstand pivot; tighten until the leg holds its angle' })
     if (geo.hardware.tiePoints)
       lines.push({ key: 'h:ties', category: 'Wiring', name: 'Zip ties, 2.5 mm wide, 100 mm', qty: Math.max(10, Math.ceil(geo.hardware.tiePoints * 1.5)), unit: 'pcs', unitPrice: 0.02, supplier: 'Any', note: `${geo.hardware.tiePoints} tie points in the case` })
     if (geo.pieces.some(pc => pc.name.startsWith('Grommet')))

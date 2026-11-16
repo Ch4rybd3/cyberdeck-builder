@@ -182,6 +182,8 @@ export function exampleBuilds(): Build[] {
     feat({ name: 'Accent stripe', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'rect', w: 290, h: 4, r: 2 }, u: 0, v: 104, depth: 0.6, color: '#2DD4BF' }),
   ]
   field.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: 0, v: 0, length: 40, rotation: 0, moduleId: 'example-sdr-module' })
+  // Kickstand near the back (bottom face: v = −y), leg folded towards the front.
+  field.accessories.push({ id: uid('acc'), kind: 'kickstand', part: 'tray', face: 'bottom', u: 0, v: -95, length: 80, width: 40, rotation: 0 })
   // Zip-tie anchors on the tray floor (bottom face: u = x, v = −y), in the gaps between parts.
   for (const [x, y] of [[-20, 10], [40, -5], [-50, 0]] as [number, number][])
     field.accessories.push({ id: uid('acc'), kind: 'tiepoint', part: 'tray', face: 'bottom', u: x, v: -y, length: 10, rotation: 0 })

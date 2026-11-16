@@ -111,6 +111,7 @@ export function assemblySteps(build: Build, geo: GeometryResult | null, modules:
     else if (a.kind === 'gland') acc.push({ text: `${a.gland ?? 'PG7'} cable gland in the ${a.part} ${a.face} hole: screw it in from outside, locknut inside; pass the cable before tightening the cap`, parts: [a.part], motion: 'show' })
     else if (a.kind === 'grommet') acc.push(accItem(a, `Grommet in the ${a.part} ${a.face} slot: push it in from outside until its lip snaps behind the wall`))
     else if (a.kind === 'tiepoint') continue
+    else if (a.kind === 'kickstand') acc.push(accItem(a, 'Kickstand: put the leg between the hinge cheeks, push the M3 bolt through, add the nyloc nut and tighten until the leg holds its angle; then screw the hinge under the case with 2 × M3'))
     else if (a.kind === 'slider') {
       acc.push({ text: 'Slider: screw the rails to the lid', piecePrefixes: [`acc-${a.id}-rail`], motion: 'slide' })
       acc.push({ text: 'Put the display in the carriage, route its cable through the carriage slot and the lid slot, and screw the bezel on', piecePrefixes: [`acc-${a.id}-carriage`, `acc-${a.id}-bezel`], placements: a.targetId ? [a.targetId] : [], motion: 'drop' })

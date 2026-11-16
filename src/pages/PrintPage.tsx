@@ -6,6 +6,7 @@ import type { InsertSize, PrintSettings } from '../domain/schema'
 import { binaryStl, orientPiece, slug, stlZip, threeMf } from '../geometry/export'
 import { download } from '../lib/download'
 import { useBuild } from '../store/buildStore'
+import { Plates } from './print/Plates'
 import { useGeometry } from '../store/geometryStore'
 import { Download } from '../ui/icons'
 import { Callout, NumberField, Panel, PanelHeader, PageShell, SelectField, StatTile, Tag, Toggle } from '../ui/primitives'
@@ -122,8 +123,10 @@ export function PrintPage() {
             </table>
           </Panel>
 
+          {result && <Plates build={build} pieces={result.pieces} printer={printer} />}
+
           <Panel>
-            <PanelHeader title="Assembly notes" numeral="03" />
+            <PanelHeader title="Assembly notes" numeral="04" />
             <ol className="list-decimal pl-9 pr-4 py-3 space-y-1.5 text-ui text-fg-secondary">
               <li>Print every piece in the orientation it is exported in: trays open side up, lids top surface down, accessories mounting face down.</li>
               <li>Set the soldering iron to about 220 °C for PLA, 240 °C for PETG, and press each insert in square to the hole with an insert tip. Let it cool before screwing into it.</li>

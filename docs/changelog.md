@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 (2026-11-16)
+
+- **Print plates**: the Print page packs the pieces onto the printer's bed, draws each plate from above with the real outlines, gives a rough time and filament weight per plate, and exports each plate as a laid-out 3MF.
+- **Kickstand**: a hinge bolted under the case and a leg that folds flat and swings down on an M3 bolt; **Kickstand** in the toolbar opens it. Wayfarer has one.
+- Printer profiles carry an average flow rate for the time estimate.
+- Build schema 9 (older builds migrate automatically).
+
 ## 0.9.0 (2026-11-16)
 
 - **Cable management**: **cable glands** (PG7, PG9, M12, M16, M20), printed **TPU grommets** with a slit membrane, and **tie points** for zip ties inside the case. Glands, zip ties and TPU are on the Shopping list and in the Assembly guide. Courier gets a PG9 gland for an external antenna and tie points; Wayfarer gets tie points.

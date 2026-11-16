@@ -73,6 +73,8 @@ export interface GeneratedPiece {
   attachedTo: PartId | null
   /** Pieces that slide (screen carriage, bezel): axis in assembled space and travel in mm. */
   slide?: { axis: V3; travel: number }
+  /** Pieces that swing (kickstand leg): pivot point and axis in assembled space, and how far it opens. */
+  pivot?: { origin: V3; axis: V3; maxDeg: number }
 }
 
 /** A display carried by a slider: drawn on the carriage, not in the case. */
@@ -96,6 +98,8 @@ export interface HardwareUse {
   glands: GlandSize[]
   /** Zip-tie anchor bridges. */
   tiePoints: number
+  /** Kickstand pivots: one M3 bolt (length in mm) and nyloc nut each. */
+  kickstandBolts: number[]
 }
 
 export interface GeometryIssue {
@@ -296,7 +300,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
   // Screws: inserts in the tray rim, counterbored screws through the lid.
   // Magnets: Ø6 × 3 mm discs pressed into matching pockets in both bosses.
   // With a hinge, only the front positions are used — the hinge holds the back.
-  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0, handleBolts: [], glands: [], tiePoints: 0 }
+  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0, handleBolts: [], glands: [], tiePoints: 0, kickstandBolts: [] }
   {
     const spec = INSERTS[p.closureInsert]
     const magnet = { d: 6.2, h: 3.2 }
@@ -493,7 +497,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
 
   // ── 5. accessories ──
   /** `pre` maps a piece's own (print) frame into the face frame, for pieces printed in another orientation. */
-  const accessoryPieces: { id: string; acc: Accessory; m: Manifold; frame: Frame; name: string; slide?: V3; travel?: number; pre?: number[] }[] = []
+  const accessoryPieces: { id: string; acc: Accessory; m: Manifold; frame: Frame; name: string; slide?: V3; travel?: number; pre?: number[]; pivot?: GeneratedPiece['pivot'] }[] = []
   const carried: CarriedDisplay[] = []
   for (const acc of build.accessories) {
     const f = faceFrame(p, acc.kind === 'slider' ? 'lid' : acc.part, acc.kind === 'slider' ? 'top' : acc.face)
@@ -533,6 +537,11 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     }
     if (acc.kind === 'grommet') {
       buildGrommet(acc, f)
+      continue
+    }
+    if (acc.kind === 'kickstand') {
+      if (acc.face !== 'bottom') issues.push({ severity: 'medium', message: 'A kickstand belongs on the bottom face.' })
+      buildKickstand(acc, f)
       continue
     }
     if (acc.kind === 'tiepoint') {
@@ -812,7 +821,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       issues.push({ severity: 'info', message: `${cap(part)} split into ${grid.nx * grid.ny} pieces for the ${printer.name} bed, joined with ${jSpec.size} inserts.` })
   }
 
-  for (const { id, acc, m, frame, name, slide, travel, pre } of accessoryPieces) {
+  for (const { id, acc, m, frame, name, slide, travel, pre, pivot } of accessoryPieces) {
     const size = boundsSize([m])
     const part: PartId = acc.kind === 'slider' ? 'lid' : acc.part
     pieces.push({
@@ -827,6 +836,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       fitsBed: fitsBed(size[0], size[1], size[2]),
       attachedTo: part,
       slide: slide && travel ? { axis: slide, travel } : undefined,
+      pivot,
     })
   }
 
@@ -1107,6 +1117,51 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     // Print frame → face frame: flip over X (z → −n) and lift so the flange sits on the wall.
     const pre = [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 1.2, 1]
     accessoryPieces.push({ id: `acc-${acc.id}-grommet`, acc, m: body, frame: f, name: `Grommet ${Math.round(su)} × ${Math.round(sv)} mm (TPU)`, pre })
+  }
+
+  /**
+   * Kickstand: a hinge (base plate and two cheeks, bolted to the floor with
+   * inserts) and a leg that folds flat under the case and swings down on an
+   * M3 bolt. Built in the face frame (z out of the bottom), leg pointing +v.
+   */
+  function buildKickstand(acc: Accessory, f: Frame) {
+    const W = Math.max(20, acc.width ?? 40)
+    const L = Math.max(40, acc.length)
+    // Pivot high enough that the leg's rounded end clears the hinge plate.
+    const pz = 9.5
+    const rot = acc.rotation
+    const turn = (m: Manifold) => (rot === 90 ? s.keep(m.rotate([0, 0, 90])) : m)
+    const alongU = (r: number, u0: number, u1: number, segs = 0) => s.keep(s.keep(s.keep(M.cylinder(u1 - u0, r, r, segs)).rotate([0, 90, 0])).translate([u0, 0, pz]))
+    const cheekU = W / 2 + 2.2
+    // Hinge: plate, two cheeks, pivot hole; two M3 screws down through the cheeks.
+    let hinge = s.keep(union([box([-W / 2 - 8, -7, 0], [W / 2 + 8, 7, 3]), box([-cheekU - 2, -7, 0], [-cheekU + 2, 7, pz + 5]), box([cheekU - 2, -7, 0], [cheekU + 2, 7, pz + 5])])!)
+    const holes: [number, number][] = [[-cheekU, -4], [cheekU, -4]]
+    const hingeCuts: Manifold[] = [alongU(1.7, -W / 2 - 10, W / 2 + 10), box([-W / 2 - 0.2, -8, 2.99], [W / 2 + 0.2, 8, pz + 6])]
+    for (const [x, y] of holes) hingeCuts.push(cylZ(INSERTS.M3.clearanceD / 2, -1, pz + 6, x, y), cylZ(INSERTS.M3.headD / 2, 3, pz + 6, x, y))
+    hinge = s.keep(hinge.subtract(union(hingeCuts)!))
+    accessoryPieces.push({ id: `acc-${acc.id}-hinge`, acc, m: turn(hinge), frame: f, name: 'Kickstand hinge' })
+    // Leg: rounded at the pivot, 6 mm thick, folded flat along +v.
+    let leg = s.keep(M.hull([alongU(6, -W / 2 + 0.4, W / 2 - 0.4), box([-W / 2 + 0.4, L - 6, pz - 3], [W / 2 - 0.4, L, pz + 3])]))
+    leg = s.keep(leg.subtract(alongU(1.75, -W, W)))
+    const axisLocal: V3 = rot === 90 ? [0, 1, 0] : [1, 0, 0]
+    const toPart = (a: V3): V3 => [a[0] * f.u[0] + a[1] * f.v[0] + a[2] * f.n[0], a[0] * f.u[1] + a[1] * f.v[1] + a[2] * f.n[1], a[0] * f.u[2] + a[1] * f.v[2] + a[2] * f.n[2]]
+    const [ou, ov] = [acc.u, acc.v]
+    const origin: V3 = [0, 1, 2].map(k => f.origin[k] + f.u[k] * ou + f.v[k] * ov + f.n[k] * pz) as V3
+    // Swing the far end away from the case: about +u when the leg points +v (sign from n × v).
+    const axis = toPart(axisLocal)
+    const deploy = toPart(rot === 90 ? [-1, 0, 0] : [0, 1, 0])
+    const n = f.n
+    const cross: V3 = [axis[1] * deploy[2] - axis[2] * deploy[1], axis[2] * deploy[0] - axis[0] * deploy[2], axis[0] * deploy[1] - axis[1] * deploy[0]]
+    const sign = cross[0] * n[0] + cross[1] * n[1] + cross[2] * n[2] >= 0 ? 1 : -1
+    accessoryPieces.push({ id: `acc-${acc.id}-leg`, acc, m: turn(leg), frame: f, name: 'Kickstand leg', pivot: { origin, axis: axis.map(a => a * sign) as V3, maxDeg: 75 } })
+    for (const [hx, hy] of holes) {
+      const [x, y] = rotate2(hx, hy, rot)
+      insertMount(acc.part, f, acc.u + x, acc.v + y, INSERTS.M3, 'accessory', 3)
+    }
+    hardware.kickstandBolts.push(W + 16 <= 45 ? 45 : W + 16 <= 50 ? 50 : 60)
+    const size = faceSize(p, acc.part, acc.face)
+    const tipV = Math.abs(acc.v) + L
+    if (tipV > size.v / 2 - 2 && rot === 0) issues.push({ severity: 'low', message: `The kickstand leg (${L} mm) reaches past the edge of the bottom when folded. Shorten it or move the hinge.` })
   }
 
   function insertMountLid(f: Frame, u: number, v: number, clamp: number) {

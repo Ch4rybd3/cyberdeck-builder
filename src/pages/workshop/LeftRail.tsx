@@ -133,6 +133,7 @@ const ACCESSORY_PRESETS: { kind: AccessoryKind; label: string; make: () => Omit<
   { kind: 'gland', label: 'Cable gland', make: () => ({ kind: 'gland', part: 'tray', face: 'back', u: 0, v: 0, length: 20, rotation: 0, gland: 'PG7' }) },
   { kind: 'grommet', label: 'Grommet', make: () => ({ kind: 'grommet', part: 'tray', face: 'back', u: 0, v: 0, length: 20, width: 8, rotation: 0 }) },
   { kind: 'tiepoint', label: 'Tie point', make: () => ({ kind: 'tiepoint', part: 'tray', face: 'bottom', u: 0, v: 0, length: 10, rotation: 0 }) },
+  { kind: 'kickstand', label: 'Kickstand', make: () => ({ kind: 'kickstand', part: 'tray', face: 'bottom', u: 0, v: -60, length: 80, width: 40, rotation: 0 }) },
   { kind: 'slider', label: 'Screen slider', make: () => ({ kind: 'slider', part: 'lid', face: 'top', u: 0, v: -30, length: 120, rotation: 0, travel: 60 }) },
 ]
 

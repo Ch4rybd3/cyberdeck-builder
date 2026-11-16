@@ -235,6 +235,16 @@ for (const [route, name, id] of [
   await shot(name)
 }
 
+// ── Plates and kickstand ──
+await open('print', 'example-vanguard')
+await page.evaluate(() => [...document.querySelectorAll('h2')].find(h => h.textContent === 'Plates')?.scrollIntoView())
+await sleep(500)
+await shot('plates')
+await open('', 'example-wayfarer')
+await view({ lid: 'solid', stand: 1, camera: 'side', cameraRev: Date.now() })
+await shot('kickstand', 'viewport')
+await view({ stand: 0, camera: 'iso', lid: 'ghost' })
+
 // ── Assembly simulation, focused on the tube handle ──
 await open('assembly', 'example-vanguard')
 await page.evaluate(() => [...document.querySelectorAll('li button')].find(x => x.textContent.startsWith('Tube handle'))?.click())

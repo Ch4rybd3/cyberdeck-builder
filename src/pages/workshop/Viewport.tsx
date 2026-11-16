@@ -154,7 +154,16 @@ function Piece({ piece, view, hinge }: { piece: GeneratedPiece; view: ViewOption
   const offset = new THREE.Matrix4().makeTranslation(piece.explode[0] * e, piece.explode[1] * e, piece.explode[2] * e)
   const t = piece.slide ? piece.slide.travel * view.slide : 0
   const slide = new THREE.Matrix4().makeTranslation(...((piece.slide?.axis ?? [0, 0, 0]).map(a => a * t) as [number, number, number]))
-  const matrix = (piece.attachedTo === 'lid' ? hinge.clone() : new THREE.Matrix4()).multiply(offset).multiply(slide).multiply(m)
+  // Swinging pieces turn about their pivot (assembled coordinates), before the hinge and explode.
+  const swing = new THREE.Matrix4()
+  if (piece.pivot && view.stand > 0) {
+    const o = new THREE.Vector3(...piece.pivot.origin)
+    swing
+      .makeTranslation(o.x, o.y, o.z)
+      .multiply(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(...piece.pivot.axis).normalize(), THREE.MathUtils.degToRad(piece.pivot.maxDeg * view.stand)))
+      .multiply(new THREE.Matrix4().makeTranslation(-o.x, -o.y, -o.z))
+  }
+  const matrix = (piece.attachedTo === 'lid' ? hinge.clone() : new THREE.Matrix4()).multiply(offset).multiply(slide).multiply(swing).multiply(m)
 
   return (
     <group matrix={matrix} matrixAutoUpdate={false}>

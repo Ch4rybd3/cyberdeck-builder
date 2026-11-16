@@ -20,6 +20,8 @@ export interface ViewOptions {
   hovered: string | null
   /** Show modules attached to DeckPort sockets. */
   modules: boolean
+  /** Kickstand legs: 0 = folded, 1 = fully open. */
+  stand: number
   /** Workshop tool: select only, move along X/Y/Z, or rotate about X/Y/Z. */
   tool: 'select' | 'move' | 'rotate'
 }
@@ -40,5 +42,6 @@ export const useView = create<ViewState>(set => ({
   hovered: null,
   tool: 'select',
   modules: true,
+  stand: 0,
   set: patch => set(patch),
 }))

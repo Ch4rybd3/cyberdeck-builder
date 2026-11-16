@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 8
+export const SCHEMA_VERSION = 9
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -78,7 +78,7 @@ export const Feature = z.object({
 export type Feature = z.infer<typeof Feature>
 
 // ── Accessories: separately printed parts bolted on with heat-set inserts ────
-export const AccessoryKind = z.enum(['picatinny', 'handle', 'foot', 'deckport', 'slider', 'gland', 'grommet', 'tiepoint'])
+export const AccessoryKind = z.enum(['picatinny', 'handle', 'foot', 'deckport', 'slider', 'gland', 'grommet', 'tiepoint', 'kickstand'])
 export type AccessoryKind = z.infer<typeof AccessoryKind>
 
 export const Accessory = z.object({

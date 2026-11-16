@@ -86,7 +86,37 @@ export function stlZip(buildName: string, pieces: GeneratedPiece[]): Uint8Array 
   return zipSync(files, { level: 6 })
 }
 
-export function threeMf(buildName: string, pieces: GeneratedPiece[]): Uint8Array {
+/**
+ * Outline of a piece on the bed: the convex hull of its vertices seen from
+ * above, in print orientation, centred like `orientPiece`.
+ */
+export function footprint(piece: GeneratedPiece): [number, number][] {
+  const pts: [number, number][] = []
+  for (const m of orientPiece(piece)) for (let i = 0; i < m.positions.length; i += 3) pts.push([m.positions[i], m.positions[i + 1]])
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const lower: [number, number][] = []
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+    lower.push(p)
+  }
+  const upper: [number, number][] = []
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i]
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+    upper.push(p)
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)]
+}
+
+/** Position of each piece on the plate: centre in mm, and whether it is turned 90°. */
+export interface PlatePlacement {
+  x: number
+  y: number
+  rotated: boolean
+}
+
+export function threeMf(buildName: string, pieces: GeneratedPiece[], layout?: PlatePlacement[]): Uint8Array {
   const colors = [...new Set(pieces.flatMap(p => p.bodies.map(b => b.color.toUpperCase())))]
   let nextId = 2
   const objects: string[] = []
@@ -116,6 +146,13 @@ export function threeMf(buildName: string, pieces: GeneratedPiece[]): Uint8Array
     })
     const parent = nextId++
     objects.push(`<object id="${parent}" name="${xml(piece.name)}" type="model"><components>${componentIds.map(c => `<component objectid="${c}"/>`).join('')}</components></object>`)
+    const placed = layout?.[pieces.indexOf(piece)]
+    if (placed) {
+      // 3MF transforms are row-major 3×4: x' = x·m00 + y·m10 + m30. A 90° turn maps (x, y) → (−y, x).
+      const rot = placed.rotated ? '0 1 0 -1 0 0 0 0 1' : '1 0 0 0 1 0 0 0 1'
+      items.push(`<item objectid="${parent}" transform="${rot} ${placed.x.toFixed(2)} ${placed.y.toFixed(2)} 0"/>`)
+      continue
+    }
     const [w, d] = piece.size
     if (cursorX + w > rowLimit && cursorX > 0) {
       cursorX = 0

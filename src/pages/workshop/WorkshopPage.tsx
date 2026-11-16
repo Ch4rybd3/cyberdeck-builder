@@ -82,6 +82,12 @@ export function WorkshopPage() {
               <span className="font-mono text-label text-fg-muted w-8">{view.lidOpen}°</span>
             </>
           )}
+          {build.accessories.some(a => a.kind === 'kickstand') && (
+            <>
+              <span className="label mb-0 ml-3">Kickstand</span>
+              <input type="range" min={0} max={1} step={0.01} value={view.stand} onChange={e => setView(() => ({ stand: Number(e.target.value) }))} className="w-24 accent-[rgb(var(--accent))]" />
+            </>
+          )}
           {hasSlider && (
             <>
               <span className="label mb-0 ml-3">Slide screen</span>

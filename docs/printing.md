@@ -12,6 +12,16 @@
 
 A 5 mm safety margin is taken off each edge of the bed before checking the fit.
 
+## Plates and print time
+
+The **Plates** panel on the Print page lays every piece out on your printer's bed. Pieces go largest first, in rows, and a piece is turned 90° when that is the only way it fits. Each plate is drawn from above with its pieces' real outlines.
+
+![Vanguard's pieces on Ender 3 plates](./images/plates.png)
+
+For each plate you get the piece count, the colours, a filament weight and a **rough print time**. The time comes from the volume and an average flow for the printer (5 mm³/s for an Ender 3, 11 for an A1, 13 for a P1S / X1C), plus a little for each colour change. A slicer gives the real figure; this one tells you whether it is an evening or a weekend.
+
+The download button on each plate exports a **3MF of that plate, laid out as shown**, ready to slice.
+
 ## Heat-set inserts
 
 The case is held together with brass heat-set inserts, never by screwing into bare plastic. The rule is the same everywhere: **one side receives the insert, the other side gets a clearance hole, and the screw is driven from that far side**, so it clamps the two parts together.

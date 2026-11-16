@@ -39,6 +39,19 @@ Print it **base down**. The 45° dovetail flanks print without supports. Test-fi
 1. Press one M3 heat-set insert into each boss on the case (220 °C for PLA, 240 °C for PETG).
 2. Hold the rail on the face and drive M3 × 6 screws (see the Shopping list for the exact length) through its counterbored holes.
 
+## Kickstand
+
+A **kickstand** tilts the deck towards you. Put it on the **bottom** face, near the back edge.
+
+- **Hinge**: a base plate with two cheeks, held under the case by two M3 screws into inserts in the floor.
+- **Leg**: folds flat under the case towards the front, and swings down on an **M3 bolt with a nyloc nut**. Tighten the nut until the leg holds its angle by friction.
+- In the Inspector: **Leg length** (how far the back lifts) and **Leg width**.
+- **Kickstand** in the Workshop toolbar swings the leg open to check it clears the feet and the edge.
+
+![Wayfarer from the side with its kickstand open](./images/kickstand.png)
+
+Print the hinge base down and the leg flat. The Wayfarer example has one.
+
 ## Cables
 
 Three accessories deal with cables. Add them from Outline → Accessories → +.

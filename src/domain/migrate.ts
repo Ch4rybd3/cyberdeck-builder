@@ -52,6 +52,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 8
     v = 8
   }
+  // 8 → 9: kickstand accessory.
+  if (v === 8) {
+    obj.schemaVersion = 9
+    v = 9
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]
