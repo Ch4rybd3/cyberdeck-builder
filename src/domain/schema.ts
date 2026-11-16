@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -78,7 +78,7 @@ export const Feature = z.object({
 export type Feature = z.infer<typeof Feature>
 
 // ── Accessories: separately printed parts bolted on with heat-set inserts ────
-export const AccessoryKind = z.enum(['picatinny', 'handle', 'foot', 'deckport', 'slider'])
+export const AccessoryKind = z.enum(['picatinny', 'handle', 'foot', 'deckport', 'slider', 'gland', 'grommet', 'tiepoint'])
 export type AccessoryKind = z.infer<typeof AccessoryKind>
 
 export const Accessory = z.object({
@@ -113,6 +113,8 @@ export const Accessory = z.object({
   style: z.enum(['block', 'tube']).optional(),
   /** Tube handle grip surface. */
   texture: z.enum(['smooth', 'ribbed', 'knurled']).optional(),
+  /** Cable gland thread size. */
+  gland: z.enum(['PG7', 'PG9', 'M12', 'M16', 'M20']).optional(),
 })
 export type Accessory = z.infer<typeof Accessory>
 

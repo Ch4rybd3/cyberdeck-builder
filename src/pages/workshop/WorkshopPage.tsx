@@ -209,7 +209,7 @@ function ViewportOverlay() {
           </div>
         </div>
       )}
-      {build.placements.length === 0 && (
+      {build.placements.length === 0 && build.accessories.length === 0 && build.features.length === 0 && (
         <div className="absolute inset-x-0 top-16 flex justify-center pointer-events-none">
           <div className="overlay-surface px-4 py-3 text-center max-w-sm">
             <div className="text-ui font-medium text-fg">An empty case</div>

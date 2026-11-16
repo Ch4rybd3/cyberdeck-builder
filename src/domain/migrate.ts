@@ -47,6 +47,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 7
     v = 7
   }
+  // 7 → 8: cable glands, grommets and tie points (new accessory kinds).
+  if (v === 7) {
+    obj.schemaVersion = 8
+    v = 8
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

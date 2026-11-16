@@ -6,7 +6,7 @@
  */
 import { componentById, syncCustomComponents } from '../catalog/components'
 import type { GeometryResult } from '../geometry/caseBuilder'
-import { INSERTS } from './hardware'
+import { GLANDS, INSERTS } from './hardware'
 import { placementBox } from './layout'
 import { MATERIALS } from './printers'
 import type { Build } from './schema'
@@ -91,6 +91,16 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
     for (const l of geo.hardware.handleBolts) handleBolts.set(l, (handleBolts.get(l) ?? 0) + 1)
     for (const [l, n] of handleBolts)
       lines.push({ key: `h:handle-${l}`, category: 'Hardware', name: `M5 × ${l} socket head bolt + M5 nut`, qty: n, unit: 'sets', unitPrice: 0.5, supplier: 'Any', note: 'Tube handle axle' })
+    const glands = new Map<string, number>()
+    for (const g of geo.hardware.glands) glands.set(g, (glands.get(g) ?? 0) + 1)
+    for (const [g, n] of glands) {
+      const spec = GLANDS[g as keyof typeof GLANDS]
+      lines.push({ key: `h:gland-${g}`, category: 'Hardware', name: `Cable gland ${g} with locknut, nylon, IP68`, qty: n, unit: 'pcs', unitPrice: spec.price, supplier: 'Any', note: `Cable ${spec.cable}` })
+    }
+    if (geo.hardware.tiePoints)
+      lines.push({ key: 'h:ties', category: 'Wiring', name: 'Zip ties, 2.5 mm wide, 100 mm', qty: Math.max(10, Math.ceil(geo.hardware.tiePoints * 1.5)), unit: 'pcs', unitPrice: 0.02, supplier: 'Any', note: `${geo.hardware.tiePoints} tie points in the case` })
+    if (geo.pieces.some(pc => pc.name.startsWith('Grommet')))
+      lines.push({ key: 'f:tpu', category: 'Filament', name: 'TPU 95A filament, a few grams', qty: 5 * geo.pieces.filter(pc => pc.name.startsWith('Grommet')).length, unit: 'g', unitPrice: 0.03, supplier: 'Any', note: 'For the grommets' })
     if (geo.hardware.hingePin)
       lines.push({ key: 'h:pin', category: 'Hardware', name: `Steel rod Ø3 mm, cut to ${geo.hardware.hingePin.length} mm`, qty: geo.hardware.hingePin.count, unit: 'pcs', unitPrice: 1.5, supplier: 'Any (silver steel, or M3 threaded rod)', note: 'Hinge pin' })
 

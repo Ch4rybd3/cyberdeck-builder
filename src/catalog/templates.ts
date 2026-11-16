@@ -182,6 +182,9 @@ export function exampleBuilds(): Build[] {
     feat({ name: 'Accent stripe', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'rect', w: 290, h: 4, r: 2 }, u: 0, v: 104, depth: 0.6, color: '#2DD4BF' }),
   ]
   field.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: 0, v: 0, length: 40, rotation: 0, moduleId: 'example-sdr-module' })
+  // Zip-tie anchors on the tray floor (bottom face: u = x, v = −y), in the gaps between parts.
+  for (const [x, y] of [[-20, 10], [40, -5], [-50, 0]] as [number, number][])
+    field.accessories.push({ id: uid('acc'), kind: 'tiepoint', part: 'tray', face: 'bottom', u: x, v: -y, length: 10, rotation: 0 })
   field.features.push(feat({ name: 'Codename', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'text', text: 'WFR-01', size: 7, font: 'mono' }, u: -95, v: 50, depth: 0.6, color: '#2DD4BF' }))
 
   const scout = newBuild('handheld', 'Scout')
@@ -284,6 +287,10 @@ export function exampleBuilds(): Build[] {
     pl('panel-usb-c', 199, 100, { rotation: 90, label: 'Charge port' }),
   ]
   courier.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: -60, v: 0, length: 40, rotation: 0, connector: 'usb-c', moduleId: gps.id })
+  // External antenna coax out through a PG9 gland on the left side, and tie points on the floor.
+  courier.accessories.push({ id: uid('acc'), kind: 'gland', part: 'tray', face: 'left', u: -100, v: 8, length: 20, rotation: 0, gland: 'PG9' })
+  for (const [x, y] of [[-150, 5], [0, 5], [100, 5]] as [number, number][])
+    courier.accessories.push({ id: uid('acc'), kind: 'tiepoint', part: 'tray', face: 'bottom', u: x, v: -y, length: 10, rotation: 0 })
   gps.targetCore = { id: courier.id, name: courier.name }
   courier.features = [
     feat({ name: 'Bottom vents', part: 'tray', face: 'bottom', op: 'cut', shape: { kind: 'slot', w: 60, h: 3 }, u: -120, v: -60, depth: 0, pattern: { nu: 1, nv: 6, du: 0, dv: 7 } }),

@@ -21,7 +21,7 @@ import type { CrossSection, Manifold, ManifoldToplevel, Mat4, Vec2 } from 'manif
 
 import { componentById, syncCustomComponents } from '../catalog/components'
 import { RAIL_MOUNT, SOCKET, USB_C } from '../domain/deckport'
-import { INSERTS, screwLength, type FastenerUse, type InsertSpec } from '../domain/hardware'
+import { GLANDS, INSERTS, screwLength, type FastenerUse, type GlandSize, type InsertSpec } from '../domain/hardware'
 import {
   faceFrame,
   faceSize,
@@ -92,6 +92,10 @@ export interface HardwareUse {
   railBolts: number
   /** Tube handles: one M5 bolt (length in mm) and nut each, through posts and grip. */
   handleBolts: number[]
+  /** Cable glands by thread size. */
+  glands: GlandSize[]
+  /** Zip-tie anchor bridges. */
+  tiePoints: number
 }
 
 export interface GeometryIssue {
@@ -277,20 +281,22 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     const ramp = s.keep(M.hull([extrudeZ(full, z1 - bevel, z1 - bevel + thin), extrudeZ(small, z1 - thin, z1)]))
     return s.keep(ramp.add(extrudeZ(full, z0, z1 - bevel + thin)))
   }
+  // The cavity is carved out of the shell here, once, so that everything added
+  // later inside it (standoffs, bosses, joint blocks, tie points) survives.
   {
-    bodies.tray.add.push(bevelled(0, H.tray, 'bottom'))
-    bodies.tray.cut.push(extrudeZ(outline(p.width - 2 * p.wall, p.depth - 2 * p.wall, ri), p.floor, H.tray + 1))
+    const cavity = extrudeZ(outline(p.width - 2 * p.wall, p.depth - 2 * p.wall, ri), p.floor, H.tray + 1)
+    bodies.tray.add.push(s.keep(bevelled(0, H.tray, 'bottom').subtract(cavity)))
   }
   {
-    bodies.lid.add.push(bevelled(0, H.lid, 'top'))
-    bodies.lid.cut.push(extrudeZ(outline(p.width - 2 * p.wall, p.depth - 2 * p.wall, ri), -1, H.lid - p.floor))
+    const cavity = extrudeZ(outline(p.width - 2 * p.wall, p.depth - 2 * p.wall, ri), -1, H.lid - p.floor)
+    bodies.lid.add.push(s.keep(bevelled(0, H.lid, 'top').subtract(cavity)))
   }
 
   // ── 2. closure ──
   // Screws: inserts in the tray rim, counterbored screws through the lid.
   // Magnets: Ø6 × 3 mm discs pressed into matching pockets in both bosses.
   // With a hinge, only the front positions are used — the hinge holds the back.
-  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0, handleBolts: [] }
+  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0, handleBolts: [], glands: [], tiePoints: 0 }
   {
     const spec = INSERTS[p.closureInsert]
     const magnet = { d: 6.2, h: 3.2 }
@@ -510,6 +516,35 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
         issues.push({ severity: 'medium', message: `The ${acc.kind === 'handle' ? 'handle' : 'rail'} on the ${acc.part} ${acc.face} face runs ${Math.round(reach - limit)} mm past the flat part of the face; its ends would hang over the corner. Shorten it or centre it.` })
     }
 
+    // ── cable management ──
+    if (acc.kind === 'gland') {
+      const size = acc.gland ?? 'PG7'
+      const g = GLANDS[size]
+      bodies[acc.part].cut.push(inFrame(cylZ(g.hole / 2, -f.thickness - 2, 1), f, acc.u, acc.v))
+      // The locknut needs flat wall around the hole on the inside.
+      const fs = faceSize(p, acc.part, acc.face)
+      const flatU = acc.face === 'top' || acc.face === 'bottom' ? fs.u / 2 - p.cornerRadius : fs.u / 2 - p.cornerRadius
+      const roomV = acc.face === 'top' || acc.face === 'bottom' ? fs.v / 2 - p.wall : fs.v / 2 - p.floor
+      if (Math.abs(acc.u) + g.nut / 2 > flatU || Math.abs(acc.v) + g.nut / 2 > roomV)
+        issues.push({ severity: 'medium', message: `The ${size} cable gland on the ${acc.part} ${acc.face} face needs ${g.nut} mm of flat wall for its locknut; it is too close to an edge.` })
+      if (p.wall > 4) issues.push({ severity: 'low', message: `A ${p.wall} mm wall is thick for a cable gland thread; check the gland's thread length.` })
+      hardware.glands.push(size)
+      continue
+    }
+    if (acc.kind === 'grommet') {
+      buildGrommet(acc, f)
+      continue
+    }
+    if (acc.kind === 'tiepoint') {
+      // A bridge inside the wall: the zip tie passes through the tunnel between bridge and wall.
+      const t = f.thickness
+      const [bu, bv, tu, tv] = rot === 90 ? [7, 10, 8, 4.2] : [10, 7, 4.2, 8]
+      bodies[acc.part].add.push(inFrame(box([-bu / 2, -bv / 2, -t - 5], [bu / 2, bv / 2, -t + 0.2]), f, acc.u, acc.v))
+      bodies[acc.part].cut.push(inFrame(box([-tu / 2, -tv / 2, -t - 2.4], [tu / 2, tv / 2, -t + 0.01]), f, acc.u, acc.v))
+      hardware.tiePoints += 1
+      continue
+    }
+
     if (acc.kind === 'deckport') {
       if (isModule && acc.mount === 'rail') {
         buildRailClamp(acc, f)
@@ -657,6 +692,13 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       const dz = partOffsetZ(p, part)
       return [{ min: [b.min[0], b.min[1], b.min[2] - dz], max: [b.max[0], b.max[1], b.max[2] - dz] } as AABB]
     })
+    // Large cut-outs in this part (windows, slots), as boxes; small holes do not matter.
+    const openings: AABB[] = pb.cut.flatMap(m => {
+      const bb = m.boundingBox()
+      const size = [bb.max[0] - bb.min[0], bb.max[1] - bb.min[1], bb.max[2] - bb.min[2]].sort((x, y) => x - y)
+      const isCavity = size[1] > Math.min(p.width, p.depth) * 0.8
+      return !isCavity && size[1] > 12 ? [{ min: bb.min as V3, max: bb.max as V3 }] : []
+    })
     const addJoints = (axis: 'x' | 'y', c: number) => {
       const span = axis === 'x' ? p.depth : p.width
       const blockH = Math.min(12, partH - p.floor - 1)
@@ -669,7 +711,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       // spanning the cut does not end up sitting on a joint block.
       const wallT = span / 2 - p.wall - 6 + 0.5
       const zWall = part === 'tray' ? Math.max(p.floor, partH / 2 - blockH / 2) : partH - p.floor - blockH
-      const zPlate = part === 'tray' ? p.floor - 0.1 : partH - p.floor - 10
+      const plateH = Math.min(10, blockH)
+      // On the floor (tray) or hanging from the ceiling (lid): the block touches the plate either way.
+      const zPlate = part === 'tray' ? p.floor - 0.1 : partH - p.floor - plateH + 0.1
       const perpendicular = axis === 'x' ? cutsY : cutsX
       const blockBox = (t: number, z0: number, h: number): AABB => ({
         min: axis === 'x' ? [c - 5, t - 6, z0] : [t - 6, c - 5, z0],
@@ -678,12 +722,14 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       const free = (t: number, z0: number, h: number) => {
         if (perpendicular.some(q => Math.abs(q - t) < 10)) return false
         const b = blockBox(t, z0, h)
-        return !occupied.some(o => aabbOverlap(o, b))
+        if (occupied.some(o => aabbOverlap(o, b))) return false
+        // A block hangs from the plate or wall it touches: not where a window or slot removed it.
+        const reach: AABB = { min: [b.min[0] - 1, b.min[1] - 1, b.min[2] - p.floor - 1], max: [b.max[0] + 1, b.max[1] + 1, b.max[2] + p.floor + 1] }
+        return !openings.some(o => aabbOverlap(o, reach))
       }
       const across: { t: number; z0: number; h: number }[] = []
       for (const t of [wallT, -wallT]) if (free(t, zWall, blockH)) across.push({ t, z0: zWall, h: blockH })
       const wanted = Math.max(2, Math.floor((span - 2 * p.wall) / 70) + 1)
-      const plateH = Math.min(10, blockH)
       const step = 10
       const limit = span / 2 - p.wall - 14
       const candidates: number[] = []
@@ -739,7 +785,11 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
         const solids = s.keepAll(all[0].m.decompose())
         if (solids.length > 1) {
           const loose = solids.filter(x => x.volume() < all[0].m.volume() * 0.5)
-          issues.push({ severity: 'medium', message: `${cap(part)}${grid.nx * grid.ny > 1 ? ` ${String.fromCharCode(65 + i)}${j + 1}` : ''}: ${loose.length} loose bit${loose.length > 1 ? 's' : ''} not attached to the case (${loose.map(x => `${Math.round(x.volume())} mm³`).join(', ')}). A feature or boss sits off the wall.` })
+          const at = (x: Manifold) => {
+            const bb = x.boundingBox()
+            return `${Math.round((bb.min[0] + bb.max[0]) / 2)}, ${Math.round((bb.min[1] + bb.max[1]) / 2)}`
+          }
+          issues.push({ severity: 'medium', message: `${cap(part)}${grid.nx * grid.ny > 1 ? ` ${String.fromCharCode(65 + i)}${j + 1}` : ''}: ${loose.length} loose bit${loose.length > 1 ? 's' : ''} not attached to the case (${loose.map(x => `${Math.round(x.volume())} mm³ at x, y = ${at(x)}`).join('; ')}). A feature or boss sits off the wall.` })
         }
         const split = grid.nx * grid.ny > 1
         const label = split ? ` ${String.fromCharCode(65 + i)}${j + 1}` : ''
@@ -1031,6 +1081,32 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     const need = L - 6
     const stock = [40, 45, 50, 55, 60, 65, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 180, 200]
     hardware.handleBolts.push(stock.filter(l => l <= need).pop() ?? stock[0])
+  }
+
+  /**
+   * Grommet: a rounded slot through the wall, and a flexible plug for it —
+   * flange outside, sleeve through the wall, a lip that snaps behind it, and a
+   * thin slit membrane the cable pushes through. Print it in TPU, flange down.
+   */
+  function buildGrommet(acc: Accessory, f: Frame) {
+    const L = Math.max(8, acc.length)
+    const W = Math.max(5, Math.min(acc.width ?? 8, L))
+    const [su, sv] = acc.rotation === 90 ? [W, L] : [L, W]
+    const t = f.thickness
+    bodies[acc.part].cut.push(inFrame(extrudeZ(rrect(su, sv, Math.min(su, sv) / 2), -t - 2, 1), f, acc.u, acc.v))
+    // Built in print orientation: flange on the bed (z = 0), sleeve upward.
+    const r = (a: number, b: number) => rrect(a, b, Math.min(a, b) / 2)
+    const flange = extrudeZ(r(su + 6, sv + 6), 0, 1.2)
+    const sleeve = extrudeZ(r(su - 0.2, sv - 0.2), 1.1, 1.2 + t + 0.1)
+    const lip = extrudeZ(r(su + 0.8, sv + 0.8), 1.2 + t + 0.1, 1.2 + t + 1.0)
+    const bore = extrudeZ(r(su - 2.4, sv - 2.4), 1.4 + 0.8, 1.2 + t + 2)
+    const membraneGap = extrudeZ(r(su - 2.4, sv - 2.4), -1, 0.4)
+    const slit = extrudeZ(acc.rotation === 90 ? rrect(0.6, Math.max(1, sv - 4), 0.3) : rrect(Math.max(1, su - 4), 0.6, 0.3), -1, 3)
+    // Membrane 0.8 mm thick, from z = 0.4 to 1.2 inside the flange.
+    const body = s.keep(s.keep(union([flange, sleeve, lip])!).subtract(union([bore, membraneGap, slit])!))
+    // Print frame → face frame: flip over X (z → −n) and lift so the flange sits on the wall.
+    const pre = [1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 1.2, 1]
+    accessoryPieces.push({ id: `acc-${acc.id}-grommet`, acc, m: body, frame: f, name: `Grommet ${Math.round(su)} × ${Math.round(sv)} mm (TPU)`, pre })
   }
 
   function insertMountLid(f: Frame, u: number, v: number, clamp: number) {

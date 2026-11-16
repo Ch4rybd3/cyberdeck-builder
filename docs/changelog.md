@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 (2026-11-16)
+
+- **Cable management**: **cable glands** (PG7, PG9, M12, M16, M20), printed **TPU grommets** with a slit membrane, and **tie points** for zip ties inside the case. Glands, zip ties and TPU are on the Shopping list and in the Assembly guide. Courier gets a PG9 gland for an external antenna and tie points; Wayfarer gets tie points.
+- **Fixed, important**: everything added *inside* the case (board standoffs, the inner half of the closure bosses, accessory insert bosses, split-joint blocks, internal bosses) was erased by the interior cavity, which was subtracted after them. The cavity is now carved out of the shell first. Re-export your STL / 3MF files: earlier exports lack these parts.
+- **Fixed**: split-joint blocks hanging from a lid's ceiling stopped 1.4 mm short of it on shallow lids. They now touch it, and joint spots under windows and slots are skipped.
+- The loose-bits check now gives the position of each loose bit.
+
 ## 0.8.0 (2026-11-16)
 
 - **Assembly simulation**: a 3D view beside the checklist plays each step: parts drop in, slide on, join or close, highlighted, with everything installed so far in place. **Done, next** ticks the step and moves on.

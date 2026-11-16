@@ -39,6 +39,22 @@ Print it **base down**. The 45° dovetail flanks print without supports. Test-fi
 1. Press one M3 heat-set insert into each boss on the case (220 °C for PLA, 240 °C for PETG).
 2. Hold the rail on the face and drive M3 × 6 screws (see the Shopping list for the exact length) through its counterbored holes.
 
+## Cables
+
+Three accessories deal with cables. Add them from Outline → Accessories → +.
+
+| Accessory | What it makes | Use it for |
+|---|---|---|
+| **Cable gland** | A hole sized for a **PG7, PG9, M12, M16 or M20** threaded gland. The gland itself is on the Shopping list. | A sealed, strain-relieved exit: an antenna coax, a power lead, a sensor cable |
+| **Grommet** | A rounded slot through the wall, and a flexible **grommet to print in TPU**: flange outside, a lip that snaps behind the wall, and a slit membrane the cable pushes through | A neat pass-through for one or several cables, or a ribbon |
+| **Tie point** | A small bridge inside a wall or the floor; a 2.5 mm zip tie goes under it | Holding cable bundles in place inside the case |
+
+![A PG9 gland hole, a grommet and two tie points](./images/cables.png)
+
+- A gland needs flat wall around it for its locknut on the inside; the Checks tab warns when it is too close to an edge.
+- Print grommets in **TPU 95A**, flange down. The membrane is 0.8 mm thick so a cable can push through its slit.
+- Place tie points along the cable routes on the Wiring page, in the gaps between components. Orientation sets which way the zip tie runs.
+
 ## Handles and grips
 
 Select a handle and choose its **Style** in the Inspector.

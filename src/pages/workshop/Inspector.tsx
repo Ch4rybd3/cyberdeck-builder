@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { CATEGORY_DATA_SLOT, PORT_LABEL, type PortType } from '../../catalog/types'
 import { TEMPLATES } from '../../catalog/templates'
 import { PICATINNY_PITCH, RAIL_MOUNT, SOCKET, SOCKET_MAX_W } from '../../domain/deckport'
+import { GLANDS } from '../../domain/hardware'
 import { connectorOf, incompatibility } from '../../domain/modules'
 import { snapToSlot } from '../../geometry/attach'
 import { fmt, moduleDraw } from '../../domain/power'
@@ -464,6 +465,9 @@ function FeatureInspector({ feature }: { feature: Feature }) {
 
 const ACC_LABEL: Record<Accessory['kind'], string> = {
   slider: 'Screen slider',
+  gland: 'Cable gland',
+  grommet: 'Grommet',
+  tiepoint: 'Tie point',
   picatinny: 'Picatinny rail',
   handle: 'Handle',
   foot: 'Foot',
@@ -690,13 +694,27 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
             <SelectField label="Face" value={acc.face} options={FACE_OPTS} onChange={v => set('face', t => void (t.face = v))} />
             <NumberField label="Offset u" unit="mm" value={acc.u} min={-size.u / 2} max={size.u / 2} onChange={v => set('u', t => void (t.u = v))} />
             <NumberField label="Offset v" unit="mm" value={acc.v} min={-size.v / 2} max={size.v / 2} onChange={v => set('v', t => void (t.v = v))} />
-            {!isPort && acc.kind !== 'foot' && <NumberField label="Length" unit="mm" value={acc.length} min={acc.kind === 'handle' ? 80 : 30} onChange={v => set('length', t => void (t.length = v))} />}
+            {!isPort && acc.kind !== 'foot' && acc.kind !== 'gland' && acc.kind !== 'grommet' && acc.kind !== 'tiepoint' && <NumberField label="Length" unit="mm" value={acc.length} min={acc.kind === 'handle' ? 80 : 30} onChange={v => set('length', t => void (t.length = v))} />}
           </Grid2>
           <Field2 label="Orientation">
             <Segmented value={acc.rotation} onChange={v => set('rot', t => void (t.rotation = v))} options={[{ value: 0, label: 'Along u' }, { value: 90, label: 'Along v' }]} />
           </Field2>
           {!isPort && <ColorField label="Colour" value={acc.color ?? build.case.colors.accessories} onChange={v => set('color', t => void (t.color = v))} />}
           {isPort && <DeckPortOptions acc={acc} />}
+          {acc.kind === 'gland' && (
+            <SelectField
+              label="Thread"
+              value={acc.gland ?? 'PG7'}
+              options={(Object.keys(GLANDS) as (keyof typeof GLANDS)[]).map(g => ({ value: g, label: `${g} — hole Ø${GLANDS[g].hole} mm, cable ${GLANDS[g].cable}` }))}
+              onChange={v => set('gland', t => void (t.gland = v))}
+            />
+          )}
+          {acc.kind === 'grommet' && (
+            <Grid2>
+              <NumberField label="Slot length" unit="mm" value={acc.length} min={8} onChange={v => set('length', t => void (t.length = v))} />
+              <NumberField label="Slot width" unit="mm" value={acc.width ?? 8} min={5} onChange={v => set('width', t => void (t.width = v))} />
+            </Grid2>
+          )}
           {acc.kind === 'handle' && (
             <>
               <Field2 label="Style">
@@ -735,7 +753,13 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
                 ? `Rail clamp: ${RAIL_MOUNT.length} × ${RAIL_MOUNT.width} mm, slides onto a Picatinny rail and locks with an M4 cross bolt in a slot. Four M3 screws hold it to this face; the module face ends up ${RAIL_MOUNT.standoff} mm from the Core.`
                 : `Module plug: a ${SOCKET.recess.w - 0.4} × ${SOCKET.recess.h - 0.4} mm key that seats in the Core recess, a connector window and four M3 clearance holes. Screws go from inside the module into the Core's inserts.`
               : `Core socket: ${SOCKET.width} × ${SOCKET.height} mm footprint, ${SOCKET.recess.depth} mm alignment recess, ${SOCKET.connectorWindow.w} × ${SOCKET.connectorWindow.h} mm connector window and four M3 heat-set inserts.`
-            : acc.kind === 'handle' && acc.style === 'tube'
+            : acc.kind === 'gland'
+              ? 'A threaded cable gland screws into the hole from outside and is held by its locknut inside. It seals the cable and takes the strain off its connector.'
+              : acc.kind === 'grommet'
+                ? 'A rounded slot through the wall, and a flexible grommet to print in TPU: its flange sits outside, its lip snaps behind the wall, and the cable pushes through a slit membrane.'
+                : acc.kind === 'tiepoint'
+                  ? 'A small bridge inside the wall or floor. Thread a 2.5 mm zip tie under it and around the cable bundle. Orientation sets which way the tie runs.'
+                  : acc.kind === 'handle' && acc.style === 'tube'
               ? 'Two posts, each held by two M3 screws into inserts in the case. A Ø24 mm grip, printed standing so its texture is clean, slides onto an M5 bolt that runs through both posts: head in a counterbore on one post, nut in a hex trap on the other. Minimum length 100 mm.'
               : 'Printed as a separate piece. M3 heat-set inserts go into bosses behind the case wall; the screws go through counterbored holes in the accessory.'}
         </p>

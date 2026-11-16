@@ -108,6 +108,9 @@ export function assemblySteps(build: Build, geo: GeometryResult | null, modules:
     else if (a.kind === 'deckport' && build.kind === 'core') acc.push({ text: `DeckPort socket on the ${a.part} ${a.face} face: ${a.connector === 'usb-c' ? 'glue or screw a USB-C receptacle (10 kΩ CC pull-up) behind the window' : 'fit the 8-pin pogo receptacle behind the window'}`, parts: [a.part], motion: 'show' })
     else if (a.kind === 'deckport' && a.mount === 'rail') acc.push(accItem(a, 'Rail clamp: screw it to the module with 4 × M3, then fit the USB-C receptacle (5.1 kΩ CC pull-down) in the end port'))
     else if (a.kind === 'deckport') acc.push({ text: `DeckPort plug: fit the ${a.connector === 'usb-c' ? 'USB-C male plug' : 'pogo pin block'} behind the window, pins facing out`, parts: [a.part], motion: 'show' })
+    else if (a.kind === 'gland') acc.push({ text: `${a.gland ?? 'PG7'} cable gland in the ${a.part} ${a.face} hole: screw it in from outside, locknut inside; pass the cable before tightening the cap`, parts: [a.part], motion: 'show' })
+    else if (a.kind === 'grommet') acc.push(accItem(a, `Grommet in the ${a.part} ${a.face} slot: push it in from outside until its lip snaps behind the wall`))
+    else if (a.kind === 'tiepoint') continue
     else if (a.kind === 'slider') {
       acc.push({ text: 'Slider: screw the rails to the lid', piecePrefixes: [`acc-${a.id}-rail`], motion: 'slide' })
       acc.push({ text: 'Put the display in the carriage, route its cable through the carriage slot and the lid slot, and screw the bezel on', piecePrefixes: [`acc-${a.id}-carriage`, `acc-${a.id}-bezel`], placements: a.targetId ? [a.targetId] : [], motion: 'drop' })
@@ -137,7 +140,9 @@ export function assemblySteps(build: Build, geo: GeometryResult | null, modules:
   const nodeName = (id: string) => names.get(id) ?? (id.startsWith('deckport') ? 'DeckPort' : id)
   const wires = effectiveWires(build)
   const ends = (w: { from: string; to: string }) => [w.from, w.to].filter(id => names.has(id))
+  const ties = build.accessories.filter(a => a.kind === 'tiepoint').length
   add('wiring', 'Wire it up', [
+    ...(ties ? [{ text: `Bundle the wires with zip ties through the ${ties} tie point${ties > 1 ? 's' : ''}; leave slack at connectors and across the lid`, parts: ['tray' as const], motion: 'show' as const }] : []),
     ...wires.filter(w => w.kind === 'power').map((w): AssemblyItem => ({ text: `Power: ${nodeName(w.from)} → ${nodeName(w.to)} (${w.label})`, placements: ends(w), motion: 'show' })),
     ...wires.filter(w => w.kind !== 'power').map((w): AssemblyItem => ({ text: `${w.kind === 'data' ? 'Data' : 'Signal'}: ${nodeName(w.from)} → ${nodeName(w.to)} (${w.label})`, placements: ends(w), motion: 'show' })),
   ], 'Check polarity with a multimeter before the first power-on. Fuse the battery output.')

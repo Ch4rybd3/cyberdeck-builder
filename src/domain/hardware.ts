@@ -61,3 +61,16 @@ export interface FastenerUse {
   /** What this joint holds together, for the assembly notes. */
   purpose: 'closure' | 'standoff' | 'split-joint' | 'accessory' | 'deckport'
 }
+
+/**
+ * Cable glands: the printed hole is the thread's major diameter plus a little,
+ * so the gland screws in and its locknut clamps from the inside.
+ */
+export const GLANDS = {
+  PG7: { hole: 12.7, nut: 15, cable: '3–6.5 mm', price: 0.6 },
+  PG9: { hole: 15.4, nut: 19, cable: '4–8 mm', price: 0.7 },
+  M12: { hole: 12.3, nut: 15, cable: '3–6.5 mm', price: 0.6 },
+  M16: { hole: 16.3, nut: 19, cable: '4–8 mm', price: 0.7 },
+  M20: { hole: 20.3, nut: 24, cable: '6–12 mm', price: 0.9 },
+} as const
+export type GlandSize = keyof typeof GLANDS

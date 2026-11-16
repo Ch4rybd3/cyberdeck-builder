@@ -193,6 +193,32 @@ for (const texture of ['knurled', 'ribbed']) {
 await page.evaluate(id => window.__cdb.build.getState().remove(id), demoId)
 await view({ camera: 'iso' })
 
+// ── Cable management close-up ──
+await open('library', 'example-wayfarer')
+const cableId = await page.evaluate(() => {
+  const s = window.__cdb.build.getState()
+  const b = s.create('slab')
+  s.update(d => {
+    d.name = 'Cable demo'
+    d.case.params.width = 180
+    d.case.params.depth = 110
+    d.case.params.trayHeight = 40
+    d.accessories = [
+      { id: 'g', kind: 'gland', part: 'tray', face: 'front', u: -45, v: 2, length: 20, rotation: 0, gland: 'PG9' },
+      { id: 'r', kind: 'grommet', part: 'tray', face: 'front', u: 30, v: 2, length: 26, width: 9, rotation: 0 },
+      { id: 't1', kind: 'tiepoint', part: 'tray', face: 'bottom', u: -30, v: 10, length: 10, rotation: 0 },
+      { id: 't2', kind: 'tiepoint', part: 'tray', face: 'bottom', u: 20, v: 10, length: 10, rotation: 0 },
+    ]
+  })
+  return b.id
+})
+await sleep(900)
+await open('', cableId)
+await view({ lid: 'hidden', explode: 0.5, camera: 'iso', cameraRev: Date.now() })
+await shot('cables', 'viewport')
+await view({ lid: 'ghost', explode: 0 })
+await page.evaluate(id => window.__cdb.build.getState().remove(id), cableId)
+
 // ── Other pages ──
 await open('', 'example-wayfarer')
 await clickText('Checks')
