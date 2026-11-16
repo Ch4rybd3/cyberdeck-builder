@@ -231,3 +231,19 @@ input[type='number'].input { -moz-appearance: textfield; }
     @apply text-label font-mono uppercase tracking-label text-fg-muted font-normal text-left px-4 py-2 border-b border-hairline whitespace-nowrap;
   }
 }
+
+/* ── Print ────────────────────────────────────────────────────────────────────
+   The app shell is a fixed-height frame with scrolling panes, which prints as
+   one clipped page. For print, every container grows to its content and the
+   chrome (sidebar, toolbars, 3D views) is dropped. */
+@media print {
+  html, body, #root { height: auto !important; overflow: visible !important; }
+  body { background: white; }
+  .h-full, .min-h-0, .overflow-hidden, .overflow-y-auto, .overflow-auto { height: auto !important; min-height: 0 !important; overflow: visible !important; }
+  [data-print='hide'], canvas { display: none !important; }
+  main { width: 100% !important; }
+  .panel, .bg-panel { break-inside: auto; }
+  li, tr, figure { break-inside: avoid; }
+  h1, h2, h3 { break-after: avoid; }
+  @page { margin: 14mm; }
+}

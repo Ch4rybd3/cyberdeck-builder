@@ -90,7 +90,7 @@ export function Layout() {
   const build = useBuild(s => s.build)
   return (
     <div className="h-full flex">
-      <nav className="w-52 shrink-0 bg-panel border-r border-hairline flex flex-col">
+      <nav data-print="hide" className="w-52 shrink-0 bg-panel border-r border-hairline flex flex-col">
         <div className="px-3 py-3 border-b border-hairline flex items-center gap-2">
           <Logo />
           <div className="min-w-0 flex-1">

@@ -41,9 +41,9 @@ export function PageShell({ route, title, backTo, subtitle, meta, actions, toolb
         {meta && <span className="text-label font-mono text-fg-muted shrink-0">{meta}</span>}
         {subtitle && <span className="text-ui text-fg-muted truncate min-w-0">{subtitle}</span>}
         <div className="flex-1 min-w-0" />
-        {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
+        {actions && <div data-print="hide" className="flex items-center gap-1 shrink-0">{actions}</div>}
       </header>
-      {toolbar && <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 border-b border-hairline flex-wrap">{toolbar}</div>}
+      {toolbar && <div data-print="hide" className="shrink-0 flex items-center gap-2 px-4 py-1.5 border-b border-hairline flex-wrap">{toolbar}</div>}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {asideLeft}
         {fullHeight ? (

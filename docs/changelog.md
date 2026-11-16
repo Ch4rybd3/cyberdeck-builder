@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 (2026-11-16)
+
+- **Assembly simulation**: a 3D view beside the checklist plays each step: parts drop in, slide on, join or close, highlighted, with everything installed so far in place. **Done, next** ticks the step and moves on.
+- The slider's assembly is split into three steps (rails; display, carriage and bezel; carriage on, end stops).
+- Fixed: printing a page only gave its first screen. Pages now print in full across as many sheets as needed, in the light palette, without the sidebar, toolbars or 3D views.
+
 ## 0.7.0 (2026-11-16)
 
 - **Tube handle**: two posts and a cylindrical grip on an M5 bolt, with a smooth, **ribbed** or **knurled** grip printed standing up. The Tactical format and the Suitcase use the knurled grip, the Briefcase the ribbed one.

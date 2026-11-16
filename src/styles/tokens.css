@@ -230,3 +230,23 @@
   --radius-control: 2px;
   --radius-pill:    9999px;
 }
+
+/* ─── Print — always the light palette, whatever the screen theme ───────── */
+@media print {
+  :root, [data-theme] {
+    --surface-canvas:    255 255 255;
+    --surface-panel:     255 255 255;
+    --surface-overlay:   255 255 255;
+    --surface-hover:     255 255 255;
+    --text-primary:      15 26 38;
+    --text-secondary:    75 92 106;
+    --text-muted:        122 138 150;
+    --text-inverse:      255 255 255;
+    --accent:            13 148 136;
+    --accent-hover:      15 118 110;
+    --accent-contrast:   255 255 255;
+    --border-hairline:   210 218 226;
+    --border-strong:     180 192 204;
+    --border-focus:      13 148 136;
+  }
+}
