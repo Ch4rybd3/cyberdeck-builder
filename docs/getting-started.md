@@ -8,7 +8,17 @@ Open **Library** and choose a format under *Start from a format*:
 
 Seven formats are available: Slab, Tactical, Briefcase, Suitcase, Field case, Handheld and DeckPort module. See [Formats](./formats.md) for pictures of each one.
 
-The library also ships five examples: **Wayfarer** (Pi 5 slab), **Vanguard** (tactical deck with a sliding screen), **Courier** (briefcase), **Scout** (handheld) and **SDR module**.
+The library also ships seven examples:
+
+| Example | Kind | What it shows |
+|---|---|---|
+| **Wayfarer** | Core, slab | 7" display, 60% keyboard, codename inlay, **SDR module** on its right socket |
+| **Vanguard** | Core, tactical | Sliding screen, side grip, rail, front label, **LoRa module** on its back socket |
+| **Courier** | Core, briefcase | Hinged lid, 10.1" display, radios, USB hub, **GPS module** on its right socket |
+| **Scout** | Core, handheld | 5" DSI display, BlackBerry keyboard |
+| **SDR module**, **LoRa module**, **GPS module** | Modules | DeckPort plugs, antenna holes, inlaid labels |
+
+Deleted one by mistake? **Library → Restore examples** puts the missing ones back.
 
 ## 2. Place components
 

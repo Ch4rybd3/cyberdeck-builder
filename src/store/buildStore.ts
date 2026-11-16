@@ -36,6 +36,8 @@ interface State {
   create(templateId: string): Build
   saveAs(build: Build, opts?: { fork?: boolean }): Build
   remove(id: string): Promise<void>
+  /** Put back the example builds missing from the library; returns their names. */
+  restoreExamples(): Promise<string[]>
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -163,6 +165,14 @@ export const useBuild = create<State>((setState, get) => ({
     setState({ build: copy, library: upsert(get().library, copy), past: [], future: [], selection: null })
     persist(copy)
     return copy
+  },
+
+  async restoreExamples() {
+    const have = new Set(get().library.map(b => b.id))
+    const missing = exampleBuilds().filter(e => !have.has(e.id))
+    await Promise.all(missing.map(b => set(b.id, b, db).catch(() => undefined)))
+    setState({ library: [...get().library, ...missing] })
+    return missing.map(b => b.name)
   },
 
   async remove(id) {

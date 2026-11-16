@@ -21,7 +21,8 @@ Opening a share link shows a preview. **Save a copy to my library** creates a **
 
 - **Start from a format** creates a new build from a case template.
 - **Fork** copies any build.
-- **Delete** removes a build from this browser only.
+- **Delete** removes a build from this browser only. It asks for a second click, because the build exists nowhere else unless you exported it.
+- **Restore examples** puts back any example build missing from the library, in its original version. Examples you kept, and your own builds, are not touched. To get a fresh copy of an example you changed, rename or fork yours first, delete the example, then restore it.
 
 ## File format
 

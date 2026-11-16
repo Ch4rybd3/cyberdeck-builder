@@ -6,17 +6,19 @@ import type { Build } from '../domain/schema'
 import { download } from '../lib/download'
 import { buildFileName, parseBuildJson, shareUrl } from '../lib/share'
 import { useBuild } from '../store/buildStore'
-import { Check, FileJson, GitFork, Link2, Plus, Trash2, Upload } from '../ui/icons'
+import { Check, FileJson, GitFork, Link2, Plus, RotateCcw, Trash2, Upload } from '../ui/icons'
 import { Callout, Panel, PanelHeader, PageShell, Tag } from '../ui/primitives'
 
 export function LibraryPage() {
   const library = useBuild(s => s.library)
   const current = useBuild(s => s.build)
-  const { open, create, saveAs, remove } = useBuild.getState()
+  const { open, create, saveAs, remove, restoreExamples } = useBuild.getState()
   const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState<{ tone: 'info' | 'warn'; text: string } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  // Deleting takes two clicks: a build lives only in this browser.
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   const importFile = async (file: File) => {
     const { build, error } = parseBuildJson(await file.text())
@@ -48,6 +50,16 @@ export function LibraryPage() {
       subtitle="Stored in this browser"
       actions={
         <>
+          <button
+            className="btn-secondary flex items-center gap-1.5"
+            title="Add back the example builds that are no longer in this library. Examples you kept are not touched."
+            onClick={async () => {
+              const names = await restoreExamples()
+              setMessage({ tone: 'info', text: names.length ? `Restored ${names.join(', ')}.` : 'Every example is already in the library.' })
+            }}
+          >
+            <RotateCcw size={14} /> Restore examples
+          </button>
           <button className="btn-secondary flex items-center gap-1.5" onClick={() => fileRef.current?.click()}><Upload size={14} /> Import file</button>
           <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={e => e.target.files?.[0] && importFile(e.target.files[0])} />
         </>
@@ -125,7 +137,14 @@ export function LibraryPage() {
                       >
                         <GitFork size={14} />
                       </button>
-                      <button className="btn-ghost text-severity-critical" title="Delete from this browser" onClick={() => remove(b.id)}><Trash2 size={14} /></button>
+                      {confirming === b.id ? (
+                        <>
+                          <button className="btn-danger" onClick={() => { remove(b.id); setConfirming(null) }}>Delete</button>
+                          <button className="btn-ghost" onClick={() => setConfirming(null)}>Keep</button>
+                        </>
+                      ) : (
+                        <button className="btn-ghost text-severity-critical" title="Delete from this browser" onClick={() => setConfirming(b.id)}><Trash2 size={14} /></button>
+                      )}
                     </div>
                   </li>
                 ))}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1 (2026-11-16)
+
+- **Restore examples** in the Library puts back any example build that was deleted, without touching the others.
+- Deleting a build now takes a confirmation click.
+- New example modules: **LoRa module** (mounted on Vanguard's back socket) and **GPS module** (mounted on Courier's right socket). The SDR module gets an inlaid label, and Courier a USB hub so every port is covered.
+- A test now checks that every example builds without blocking issues, with its modules attached.
+
 ## 0.5.0 (2026-11-16)
 
 - **Modules on the Core**: a DeckPort socket can hold a module from the library. The module is drawn mounted on the socket (and follows a hinged lid), its draw is a load on the Core's 5 V rail, and the checks cover the 15 W socket limit and DeckPort version compatibility. The DeckID lists attached modules. The Wayfarer example now carries the SDR module.
