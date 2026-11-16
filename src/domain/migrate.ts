@@ -42,6 +42,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 6
     v = 6
   }
+  // 6 → 7: handle style and grip texture (optional).
+  if (v === 6) {
+    obj.schemaVersion = 7
+    v = 7
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

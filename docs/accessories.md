@@ -5,7 +5,8 @@ Accessories are **separately printed parts** that bolt onto the case. The case g
 | Accessory | Size | Fixing |
 |---|---|---|
 | **Picatinny rail** | 21.2 mm wide, your length | M3 screws on the lands between slots, at both ends (plus the middle from 120 mm) |
-| **Handle** | 20 × 32 mm section, your length (min. 80 mm) | 4 × M3, two in each foot |
+| **Handle, block** | 20 × 32 mm section, your length (min. 80 mm) | 4 × M3, two in each foot |
+| **Handle, tube** | Two posts and a Ø24 mm grip, your length (min. 100 mm) | 4 × M3 for the posts, one M5 bolt through posts and grip |
 | **Foot** | Ø18 × 5 mm | 1 × M3, add a rubber bumper |
 | **DeckPort** | 40 × 20 mm socket or plug | 4 × M3, see [DeckPort](./deckport.md) |
 | **Screen slider** | Sized from its display | See [Screen slider](./slider.md) |
@@ -40,7 +41,23 @@ Print it **base down**. The 45° dovetail flanks print without supports. Test-fi
 
 ## Handles and grips
 
-The handle is a U shape bolted on with four screws. On the **Tactical** format it sits on the left face as a side grip; on the **Briefcase** and **Suitcase** formats it is on the front face of the tray, so the case hangs hinge-up when carried.
+Select a handle and choose its **Style** in the Inspector.
+
+- **Block**: a one-piece U shape bolted on with four screws.
+- **Tube**: two rounded posts, each held by two M3 screws into inserts in the case, and a cylindrical **grip** on an **M5 bolt** between them. The bolt head sits in a counterbore on one post, its nut in a hex trap on the other. The grip prints **standing up**, so its texture comes out clean with no supports. Choose its surface under **Grip**:
+  - **Smooth**,
+  - **Ribbed**: a ring every 5 mm,
+  - **Knurled**: a diamond knurl from two opposite 30° helices.
+
+![Knurled grip](./images/handle-knurled.png)
+
+![Ribbed grip](./images/handle-ribbed.png)
+
+To assemble a tube handle: screw both posts on, hold the grip between them, push the M5 bolt through post, grip and post, and tighten the nut. The Shopping list gives the bolt length.
+
+A handle or rail must stay on the **flat part of its face**: on a rounded or chamfered case the last *corner radius* millimetres of each side curve away. The Checks tab warns when one runs past it.
+
+On the **Tactical** format it sits on the left face as a side grip; on the **Briefcase** and **Suitcase** formats it is on the front face of the tray, so the case hangs hinge-up when carried.
 
 ## Feet
 

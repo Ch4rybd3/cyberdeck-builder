@@ -166,6 +166,33 @@ await page.evaluate(() => {
 await shot('component-editor')
 await page.keyboard.press('Escape')
 
+// ── Tube handle close-ups ──
+await open('library', 'example-wayfarer')
+const demoId = await page.evaluate(() => {
+  const s = window.__cdb.build.getState()
+  const b = s.create('slab')
+  s.update(d => {
+    d.name = 'Handle demo'
+    d.case.params.width = 200
+    d.case.params.depth = 120
+    d.case.params.trayHeight = 40
+    d.accessories = [{ id: 'h1', kind: 'handle', part: 'tray', face: 'front', u: 0, v: 0, length: 150, rotation: 0, style: 'tube', texture: 'knurled' }]
+  })
+  return b.id
+})
+await sleep(900)
+for (const texture of ['knurled', 'ribbed']) {
+  await open('', demoId)
+  await page.evaluate(t => window.__cdb.build.getState().update(d => void (d.accessories[0].texture = t)), texture)
+  await waitGeometry()
+  await view({ lid: 'solid', camera: 'front', cameraRev: Date.now() })
+  await sleep(600)
+  const box = await (await page.$('canvas')).boundingBox()
+  await shot(`handle-${texture}`, { x: box.x + 150, y: box.y + 250, width: 500, height: 320 })
+}
+await page.evaluate(id => window.__cdb.build.getState().remove(id), demoId)
+await view({ camera: 'iso' })
+
 // ── Other pages ──
 await open('', 'example-wayfarer')
 await clickText('Checks')
@@ -176,6 +203,7 @@ for (const [route, name, id] of [
   ['bom', 'shopping-list', 'example-courier'],
   ['print', 'print', 'example-vanguard'],
   ['identity', 'deckid', 'example-vanguard'],
+  ['assembly', 'assembly', 'example-vanguard'],
 ]) {
   await open(route, id)
   await shot(name)

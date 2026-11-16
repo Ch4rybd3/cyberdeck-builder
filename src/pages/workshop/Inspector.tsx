@@ -697,6 +697,33 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
           </Field2>
           {!isPort && <ColorField label="Colour" value={acc.color ?? build.case.colors.accessories} onChange={v => set('color', t => void (t.color = v))} />}
           {isPort && <DeckPortOptions acc={acc} />}
+          {acc.kind === 'handle' && (
+            <>
+              <Field2 label="Style">
+                <Segmented
+                  value={acc.style ?? 'block'}
+                  onChange={v => set('style', t => void (t.style = v))}
+                  options={[
+                    { value: 'block', label: 'Block', title: 'One-piece U handle' },
+                    { value: 'tube', label: 'Tube', title: 'Two posts and a cylindrical grip on an M5 bolt' },
+                  ]}
+                />
+              </Field2>
+              {acc.style === 'tube' && (
+                <Field2 label="Grip">
+                  <Segmented
+                    value={acc.texture ?? 'knurled'}
+                    onChange={v => set('texture', t => void (t.texture = v))}
+                    options={[
+                      { value: 'smooth', label: 'Smooth' },
+                      { value: 'ribbed', label: 'Ribbed', title: 'Rings every 5 mm' },
+                      { value: 'knurled', label: 'Knurled', title: 'Diamond knurl from two opposite 30° helices' },
+                    ]}
+                  />
+                </Field2>
+              )}
+            </>
+          )}
         </div>
       </Section>
       {(isPort || acc.kind === 'picatinny') && build.kind === 'core' && <ModulePoint acc={acc} />}
@@ -708,7 +735,9 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
                 ? `Rail clamp: ${RAIL_MOUNT.length} × ${RAIL_MOUNT.width} mm, slides onto a Picatinny rail and locks with an M4 cross bolt in a slot. Four M3 screws hold it to this face; the module face ends up ${RAIL_MOUNT.standoff} mm from the Core.`
                 : `Module plug: a ${SOCKET.recess.w - 0.4} × ${SOCKET.recess.h - 0.4} mm key that seats in the Core recess, a connector window and four M3 clearance holes. Screws go from inside the module into the Core's inserts.`
               : `Core socket: ${SOCKET.width} × ${SOCKET.height} mm footprint, ${SOCKET.recess.depth} mm alignment recess, ${SOCKET.connectorWindow.w} × ${SOCKET.connectorWindow.h} mm connector window and four M3 heat-set inserts.`
-            : 'Printed as a separate piece. M3 heat-set inserts go into bosses behind the case wall; the screws go through counterbored holes in the accessory.'}
+            : acc.kind === 'handle' && acc.style === 'tube'
+              ? 'Two posts, each held by two M3 screws into inserts in the case. A Ø24 mm grip, printed standing so its texture is clean, slides onto an M5 bolt that runs through both posts: head in a counterbore on one post, nut in a hex trap on the other. Minimum length 100 mm.'
+              : 'Printed as a separate piece. M3 heat-set inserts go into bosses behind the case wall; the screws go through counterbored holes in the accessory.'}
         </p>
       </Section>
     </>

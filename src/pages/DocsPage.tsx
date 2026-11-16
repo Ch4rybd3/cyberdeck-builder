@@ -18,7 +18,7 @@ const imageUrl = (src?: string) => {
   return hit ? hit[1] : src
 }
 
-const ORDER = ['index', 'getting-started', 'workshop', 'custom-components', 'formats', 'case-geometry', 'accessories', 'slider', 'printing', 'power', 'wiring', 'deckport', 'modules', 'sharing', 'catalog', 'architecture', 'changelog']
+const ORDER = ['index', 'getting-started', 'workshop', 'custom-components', 'formats', 'case-geometry', 'accessories', 'slider', 'printing', 'assembly', 'power', 'wiring', 'deckport', 'modules', 'sharing', 'catalog', 'architecture', 'changelog']
 
 const pages = Object.entries(files)
   .map(([path, body]) => {

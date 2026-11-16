@@ -66,6 +66,12 @@ Each face has its own 2D axes, as seen from outside the case:
 
 *Offset u / v* move the sketch from the face centre. *Rotation* turns it on the face.
 
+### Staying on the wall
+
+An **extrude** feature is trimmed to the **flat part of its face**: on a rounded or chamfered case, ribs or pads that run onto the corner would hang in the air, so the part past the flat is cut off and the Checks tab says so. Bevelled edges count too: on a bevelled tray the bottom of each side is not flat.
+
+The generator also checks every printed piece for **loose bits**: solids that touch nothing else, which would come off the bed as separate fragments. When it finds one, the Checks tab names the piece and its volume.
+
 ### Patterns
 
 *Count u × Count v* repeats the sketch on a grid, centred on the offset, with *Pitch u / v* spacing. A vent block is a slot with *Count v = 6, Pitch v = 8*.

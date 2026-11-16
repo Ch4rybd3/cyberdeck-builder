@@ -90,6 +90,8 @@ export interface HardwareUse {
   hingePin: { count: number; length: number } | null
   /** Rail clamps on a module: one M4 cross bolt and nyloc nut each. */
   railBolts: number
+  /** Tube handles: one M5 bolt (length in mm) and nut each, through posts and grip. */
+  handleBolts: number[]
 }
 
 export interface GeometryIssue {
@@ -288,12 +290,12 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
   // Screws: inserts in the tray rim, counterbored screws through the lid.
   // Magnets: Ø6 × 3 mm discs pressed into matching pockets in both bosses.
   // With a hinge, only the front positions are used — the hinge holds the back.
-  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0 }
+  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0, handleBolts: [] }
   {
     const spec = INSERTS[p.closureInsert]
     const magnet = { d: 6.2, h: 3.2 }
     const br = p.closure === 'magnets' ? Math.max(spec.bossD, magnet.d + 3) / 2 : spec.bossD / 2
-    let pts = closurePoints(p.width, p.depth, p.wall, p.cornerRadius * (chamfer ? 0.6 : 1), br, p.closureScrews)
+    let pts = closurePoints(p.width, p.depth, p.wall, p.cornerRadius, br, p.closureScrews, chamfer)
     if (p.hinge) pts = pts.filter(([, y]) => y < 0)
     const clamp = Math.min(H.lid, 5)
     for (const [x, y] of pts) {
@@ -405,6 +407,34 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     fasteners.push({ size: spec.size, screwLength: screwLength(clamp, spec), purpose })
   }
 
+  /**
+   * The flat part of a face, in its (u, v) coordinates. Past it the case curves
+   * or chamfers away, so anything extruded there would float.
+   */
+  const flatRegion = (part: PartId, face: Face): CrossSection => {
+    const h = H[part]
+    if (face === 'top' || face === 'bottom') {
+      const b = (part === 'lid' && face === 'top') || (part === 'tray' && face === 'bottom') ? bevel : 0
+      return outline(p.width - 2 * b, p.depth - 2 * b, insetR(p.cornerRadius, b))
+    }
+    const len = face === 'front' || face === 'back' ? p.width : p.depth
+    const halfU = Math.max(1, len / 2 - p.cornerRadius)
+    const v0 = -h / 2 + (part === 'tray' && bevel >= 0.2 ? bevel : 0)
+    const v1 = h / 2 - (part === 'lid' && bevel >= 0.2 ? bevel : 0)
+    return s.keep(s.keep(CS.square([2 * halfU, Math.max(1, v1 - v0)], true)).translate([0, (v0 + v1) / 2]))
+  }
+  /** Keep only what sits on the flat part of the face; report when something was trimmed. */
+  const clipToFace = (m: Manifold, feat: Feature, f: Frame, depth: number): Manifold => {
+    const region = inFrame(extrudeZ(flatRegion(feat.part, feat.face), -f.thickness - 1, depth + 1), f)
+    const clipped = s.keep(m.intersect(region))
+    if (clipped.volume() < m.volume() - 0.5 && !trimmed.has(feat.id)) {
+      trimmed.add(feat.id)
+      issues.push({ severity: 'low', message: `${feat.name}: trimmed where it ran past the flat part of the ${feat.part} ${feat.face} face, onto the ${chamfer ? 'chamfered' : 'rounded'} corner.` })
+    }
+    return clipped
+  }
+  const trimmed = new Set<string>()
+
   for (const feat of build.features) {
     if (!feat.enabled) continue
     applyFeature(feat)
@@ -428,9 +458,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
             const depth = Math.max(0.2, feat.depth || 2)
             const color = feat.color ?? partColor
             if (color === partColor) {
-              bodies[part].add.push(inFrame(extrudeZ(base, -0.2, depth), f, u, v))
+              bodies[part].add.push(clipToFace(inFrame(extrudeZ(base, -0.2, depth), f, u, v), feat, f, depth))
             } else {
-              bodies[part].colored.push({ color, m: inFrame(extrudeZ(base, 0, depth), f, u, v) })
+              bodies[part].colored.push({ color, m: clipToFace(inFrame(extrudeZ(base, 0, depth), f, u, v), feat, f, depth) })
             }
             break
           }
@@ -456,7 +486,8 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
   }
 
   // ── 5. accessories ──
-  const accessoryPieces: { id: string; acc: Accessory; m: Manifold; frame: Frame; name: string; slide?: V3; travel?: number }[] = []
+  /** `pre` maps a piece's own (print) frame into the face frame, for pieces printed in another orientation. */
+  const accessoryPieces: { id: string; acc: Accessory; m: Manifold; frame: Frame; name: string; slide?: V3; travel?: number; pre?: number[] }[] = []
   const carried: CarriedDisplay[] = []
   for (const acc of build.accessories) {
     const f = faceFrame(p, acc.kind === 'slider' ? 'lid' : acc.part, acc.kind === 'slider' ? 'top' : acc.face)
@@ -467,6 +498,16 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     if (acc.kind === 'slider') {
       buildSlider(acc, f)
       continue
+    }
+    // Rails and handles must sit on the flat part of a side face, or their mounting bosses float.
+    if ((acc.kind === 'picatinny' || acc.kind === 'handle') && acc.face !== 'top' && acc.face !== 'bottom') {
+      const along = acc.face === 'front' || acc.face === 'back' ? p.width : p.depth
+      const flatU = along / 2 - p.cornerRadius
+      const flatV = H[acc.part] / 2
+      const reach = rot === 90 ? Math.abs(acc.v) + acc.length / 2 : Math.abs(acc.u) + acc.length / 2
+      const limit = rot === 90 ? flatV : flatU
+      if (reach > limit + 0.5)
+        issues.push({ severity: 'medium', message: `The ${acc.kind === 'handle' ? 'handle' : 'rail'} on the ${acc.part} ${acc.face} face runs ${Math.round(reach - limit)} mm past the flat part of the face; its ends would hang over the corner. Shorten it or centre it.` })
     }
 
     if (acc.kind === 'deckport') {
@@ -552,6 +593,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       const hc = holes.map(([u, v]) => cylZ(spec.clearanceD / 2, -1, 11, u, v))
       const hb = holes.map(([u, v]) => cylZ(spec.headD / 2, clamp, 11, u, v))
       local = s.keep(rail.subtract(union([...hc, ...hb])!))
+    } else if (acc.kind === 'handle' && acc.style === 'tube') {
+      buildTubeHandle(acc, f)
+      continue
     } else if (acc.kind === 'handle') {
       name = `Handle ${acc.length} mm`
       const L = Math.max(80, acc.length)
@@ -691,6 +735,12 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
         }
         const all = [{ color: colors[part], m: trim(main) }, ...colored.map(b => ({ color: b.color, m: trim(b.m) }))].filter(b => !b.m.isEmpty())
         if (!all.length) continue
+        // A main body in several disconnected solids means something floats: it would print as loose bits.
+        const solids = s.keepAll(all[0].m.decompose())
+        if (solids.length > 1) {
+          const loose = solids.filter(x => x.volume() < all[0].m.volume() * 0.5)
+          issues.push({ severity: 'medium', message: `${cap(part)}${grid.nx * grid.ny > 1 ? ` ${String.fromCharCode(65 + i)}${j + 1}` : ''}: ${loose.length} loose bit${loose.length > 1 ? 's' : ''} not attached to the case (${loose.map(x => `${Math.round(x.volume())} mm³`).join(', ')}). A feature or boss sits off the wall.` })
+        }
         const split = grid.nx * grid.ny > 1
         const label = split ? ` ${String.fromCharCode(65 + i)}${j + 1}` : ''
         const size = boundsSize(all.map(b => b.m))
@@ -712,7 +762,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       issues.push({ severity: 'info', message: `${cap(part)} split into ${grid.nx * grid.ny} pieces for the ${printer.name} bed, joined with ${jSpec.size} inserts.` })
   }
 
-  for (const { id, acc, m, frame, name, slide, travel } of accessoryPieces) {
+  for (const { id, acc, m, frame, name, slide, travel, pre } of accessoryPieces) {
     const size = boundsSize([m])
     const part: PartId = acc.kind === 'slider' ? 'lid' : acc.part
     pieces.push({
@@ -720,7 +770,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       name,
       group: 'accessory',
       bodies: [toBody(m, acc.color ?? colors.accessories)],
-      assembly: mul(translation(0, 0, partOffsetZ(p, part)), frameMatrix(frame, acc.u, acc.v)),
+      assembly: mul(mul(translation(0, 0, partOffsetZ(p, part)), frameMatrix(frame, acc.u, acc.v)), pre ?? IDENTITY),
       explode: frame.n,
       printFlip: false,
       size,
@@ -912,7 +962,85 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       issues.push({ severity: 'medium', message: `The rail clamp (${L} × ${W} mm) is larger than the ${acc.face} face (${Math.round(size.u)} × ${Math.round(size.v)} mm): its screws miss the module. Put the clamp on a larger face, usually the bottom.` })
   }
 
+  /**
+   * Technical handle: two posts bolted to the case, and a cylindrical grip
+   * sleeve on an M5 bolt between them. The grip is printed standing, so its
+   * texture comes out clean, and slid onto the bolt at assembly.
+   */
+  function buildTubeHandle(acc: Accessory, f: Frame) {
+    const L = Math.max(100, acc.length)
+    const axisZ = 38
+    const gripR = 12
+    const rot = acc.rotation
+    const turn = (m: Manifold) => (rot === 90 ? s.keep(m.rotate([0, 0, 90])) : m)
+    const alongX = (r: number, x0: number, x1: number, segs = 0) => s.keep(s.keep(s.keep(M.cylinder(x1 - x0, r, r, segs)).rotate([0, 90, 0])).translate([x0, 0, axisZ]))
+    const xs = [-(L / 2 - 10), L / 2 - 10]
+    const holes: [number, number][] = []
+    xs.forEach((x, k) => {
+      let post = s.keep(M.hull([box([x - 10, -11, 0], [x + 10, 11, 1]), alongX(11, x - 10, x + 10)]))
+      const cuts: Manifold[] = [alongX(2.75, x - 11, x + 11)]
+      // Bolt head counterbore on the outside of one post, hex nut trap on the other.
+      if (k === 0) cuts.push(alongX(4.6, x - 11, x - 10 + 5.5))
+      else cuts.push(alongX(4.65, x + 10 - 4.5, x + 11, 6))
+      for (const y of [-6, 6]) {
+        cuts.push(cylZ(INSERTS.M3.clearanceD / 2, -1, 60, x, y), cylZ(INSERTS.M3.headD / 2, 6, 60, x, y))
+        holes.push([x, y])
+      }
+      post = s.keep(post.subtract(union(cuts)!))
+      accessoryPieces.push({ id: `acc-${acc.id}-post-${k}`, acc, m: turn(post), frame: f, name: `Handle post ${k === 0 ? 'A' : 'B'}` })
+    })
+
+    // Grip sleeve, built standing on z (its print orientation).
+    const len = L - 40 - 1
+    let grip: Manifold
+    const texture = acc.texture ?? 'knurled'
+    if (texture === 'knurled') {
+      // Two opposite 30° helices of 30 flutes intersect into a diamond knurl.
+      const n = 30
+      const star: Vec2[] = []
+      for (let i = 0; i < n * 2; i++) {
+        const a = (i / (n * 2)) * Math.PI * 2
+        const r = i % 2 === 0 ? gripR : gripR - 0.9
+        star.push([r * Math.cos(a), r * Math.sin(a)])
+      }
+      const cs = s.keep(CS.ofPolygons([star]))
+      const twist = ((len * Math.tan(Math.PI / 6)) / (2 * Math.PI * gripR)) * 360
+      const divisions = Math.ceil(len / 1.5)
+      grip = s.keep(s.keep(cs.extrude(len, divisions, twist)).intersect(s.keep(cs.extrude(len, divisions, -twist))))
+    } else {
+      grip = cylZ(gripR, 0, len)
+      if (texture === 'ribbed') {
+        const rings: Manifold[] = []
+        for (let z = 4; z <= len - 4; z += 5) rings.push(s.keep(cylZ(gripR + 1, z, z + 1.6).subtract(cylZ(gripR - 0.7, z - 0.1, z + 1.7))))
+        if (rings.length) grip = s.keep(grip.subtract(union(rings)!))
+      }
+    }
+    // Chamfered ends, and the bore for the M5 bolt.
+    const ends = s.keep(M.hull([cylZ(gripR - 1.2, 0, 0.01), cylZ(gripR + 1, 1.2, len - 1.2), cylZ(gripR - 1.2, len - 0.01, len)]))
+    grip = s.keep(s.keep(grip.intersect(ends)).subtract(cylZ(2.8, -1, len + 1)))
+    // Print frame (axis on z) → face frame: z → x, centred between the posts, on the bolt axis.
+    const lay = [0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, -len / 2, 0, axisZ, 1]
+    const pre = rot === 90 ? mul([0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1], lay) : lay
+    accessoryPieces.push({ id: `acc-${acc.id}-grip`, acc, m: grip, frame: f, name: 'Handle grip', pre })
+
+    for (const [hx, hy] of holes) {
+      const [x, y] = rotate2(hx, hy, rot)
+      insertMount(acc.part, f, acc.u + x, acc.v + y, INSERTS.M3, 'accessory', 6)
+    }
+    // M5 bolt from the counterbore floor to through the nut.
+    const need = L - 6
+    const stock = [40, 45, 50, 55, 60, 65, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 180, 200]
+    hardware.handleBolts.push(stock.filter(l => l <= need).pop() ?? stock[0])
+  }
+
   function insertMountLid(f: Frame, u: number, v: number, clamp: number) {
+    // The boss hangs under the lid top: it must clear the walls, chamfered or rounded corners included.
+    const clear = p.wall + spec3.bossD / 2
+    const inCorner = chamfer
+      ? Math.abs(u) + Math.abs(v) > p.width / 2 + p.depth / 2 - p.cornerRadius - clear * Math.SQRT2
+      : Math.hypot(Math.max(0, Math.abs(u) - (p.width / 2 - p.cornerRadius)), Math.max(0, Math.abs(v) - (p.depth / 2 - p.cornerRadius))) > p.cornerRadius - clear
+    if (Math.abs(u) > p.width / 2 - clear || Math.abs(v) > p.depth / 2 - clear || inCorner)
+      issues.push({ severity: 'medium', message: `A slider screw at (${Math.round(u)}, ${Math.round(v)}) is too close to the lid edge or corner for its insert boss. Reduce the travel, the carriage length or its width.` })
     const extra = Math.max(0, spec3.holeDepth + 1.2 - f.thickness)
     bodies.lid.add.push(inFrame(cylZ(spec3.bossD / 2, -f.thickness - extra, -f.thickness + 0.2), f, u, v))
     bodies.lid.cut.push(inFrame(cylZ(spec3.holeD / 2, -spec3.holeDepth, 1), f, u, v))
@@ -981,10 +1109,21 @@ export function chooseGrid(
  * Closure screw positions: four in the corners (pulled in along the diagonal
  * when the corners are rounded) plus extra pairs spread along the long edges.
  */
-export function closurePoints(w: number, d: number, wall: number, r: number, br: number, count: number): [number, number][] {
+export function closurePoints(w: number, d: number, wall: number, r: number, br: number, count: number, chamfer = false): [number, number][] {
   const inset = wall + br - 0.6
   let cx: number, cy: number
-  if (r > inset) {
+  if (chamfer) {
+    // Start in the corner of the straight walls, then slide in along the diagonal
+    // until the boss clears the 45° chamfer by 0.4 mm of skin.
+    cx = w / 2 - inset
+    cy = d / 2 - inset
+    const limit = w / 2 + d / 2 - r - (br + 0.4) * Math.SQRT2
+    if (cx + cy > limit) {
+      const delta = (cx + cy - limit) / 2
+      cx -= delta
+      cy -= delta
+    }
+  } else if (r > inset) {
     const dist = Math.max(0, r - wall - br + 0.6)
     cx = w / 2 - r + dist / Math.SQRT2
     cy = d / 2 - r + dist / Math.SQRT2

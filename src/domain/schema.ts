@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -109,6 +109,10 @@ export const Accessory = z.object({
   port: z.enum(['none', 'above', 'below', 'start', 'end']).optional(),
   /** Picatinny rail on a Core: where the module sits along the rail, from its centre (snapped to the slot pitch). */
   moduleAt: z.number().optional(),
+  /** Handle: one-piece U block, or two posts with a cylindrical grip on an M5 bolt. */
+  style: z.enum(['block', 'tube']).optional(),
+  /** Tube handle grip surface. */
+  texture: z.enum(['smooth', 'ribbed', 'knurled']).optional(),
 })
 export type Accessory = z.infer<typeof Accessory>
 

@@ -87,6 +87,10 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
       lines.push({ key: 'h:magnets', category: 'Hardware', name: 'Neodymium disc magnet Ø6 × 3 mm (N52)', qty: geo.hardware.magnets, unit: 'pcs', unitPrice: 0.15, supplier: 'Any', note: 'Press-fit; mind the polarity — see Printing' })
     if (geo.hardware.railBolts)
       lines.push({ key: 'h:railbolt', category: 'Hardware', name: 'M4 × 40 socket head bolt + M4 nyloc nut', qty: geo.hardware.railBolts, unit: 'sets', unitPrice: 0.3, supplier: 'Any', note: 'Rail clamp cross bolt' })
+    const handleBolts = new Map<number, number>()
+    for (const l of geo.hardware.handleBolts) handleBolts.set(l, (handleBolts.get(l) ?? 0) + 1)
+    for (const [l, n] of handleBolts)
+      lines.push({ key: `h:handle-${l}`, category: 'Hardware', name: `M5 × ${l} socket head bolt + M5 nut`, qty: n, unit: 'sets', unitPrice: 0.5, supplier: 'Any', note: 'Tube handle axle' })
     if (geo.hardware.hingePin)
       lines.push({ key: 'h:pin', category: 'Hardware', name: `Steel rod Ø3 mm, cut to ${geo.hardware.hingePin.length} mm`, qty: geo.hardware.hingePin.count, unit: 'pcs', unitPrice: 1.5, supplier: 'Any (silver steel, or M3 threaded rod)', note: 'Hinge pin' })
 

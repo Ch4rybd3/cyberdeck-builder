@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 (2026-11-16)
+
+- **Tube handle**: two posts and a cylindrical grip on an M5 bolt, with a smooth, **ribbed** or **knurled** grip printed standing up. The Tactical format and the Suitcase use the knurled grip, the Briefcase the ribbed one.
+- **Assembly guide**: a new page that lists the build's assembly steps in order, from printing to closing the case, with boxes to tick.
+- Fixed: closure bosses on **chamfered** cases poked through the corner chamfer. They now slide in along the diagonal until they clear it.
+- Fixed: the Tactical front ribs ran onto the chamfered corners. Extrude features are now trimmed to the flat part of their face, and the checks report it.
+- Fixed: the Tactical template's slider put its end-stop bosses in the lid corners. Slider screws too close to an edge or corner are now flagged.
+- New checks: **loose bits** (a printed piece in several disconnected solids), and rails or handles that run past the flat part of their face.
+- Build schema 7 (older builds migrate automatically).
+
 ## 0.6.0 (2026-11-16)
 
 - **DeckPort 1.1**: adds a **USB-C** connector option for sockets and plugs, and a **rail mount**: a printed Picatinny clamp with an M4 cross bolt, and a USB-C cable to a port beside the rail or past its end. Every 1.0 module still fits.

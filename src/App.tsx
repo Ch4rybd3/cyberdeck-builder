@@ -14,6 +14,7 @@ const PrintPage = lazy(() => import('./pages/PrintPage').then(m => ({ default: m
 const IdentityPage = lazy(() => import('./pages/IdentityPage').then(m => ({ default: m.IdentityPage })))
 const LibraryPage = lazy(() => import('./pages/LibraryPage').then(m => ({ default: m.LibraryPage })))
 const ImportPage = lazy(() => import('./pages/ImportPage').then(m => ({ default: m.ImportPage })))
+const AssemblyPage = lazy(() => import('./pages/AssemblyPage').then(m => ({ default: m.AssemblyPage })))
 const DocsPage = lazy(() => import('./pages/DocsPage').then(m => ({ default: m.DocsPage })))
 
 function Pages() {
@@ -25,6 +26,7 @@ function Pages() {
             <Route path="/wiring" element={<WiringPage />} />
             <Route path="/bom" element={<BomPage />} />
             <Route path="/print" element={<PrintPage />} />
+            <Route path="/assembly" element={<AssemblyPage />} />
             <Route path="/identity" element={<IdentityPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/import" element={<ImportPage />} />

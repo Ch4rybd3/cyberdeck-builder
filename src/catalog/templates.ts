@@ -45,11 +45,12 @@ export const TEMPLATES: CaseTemplate[] = [
     kind: 'core',
     params: { ...base, width: 320, depth: 250, trayHeight: 34, lidHeight: 12, wall: 3, floor: 2.4, cornerRadius: 18, cornerStyle: 'chamfer', bevel: 3.5, closureScrews: 8 },
     accessories: [
-      { kind: 'handle', part: 'tray', face: 'left', u: 0, v: 0, length: 160, rotation: 0 },
+      { kind: 'handle', part: 'tray', face: 'left', u: 0, v: 0, length: 160, rotation: 0, style: 'tube', texture: 'knurled' },
       { kind: 'picatinny', part: 'tray', face: 'right', u: 0, v: 0, length: 140, rotation: 0 },
-      { kind: 'slider', part: 'lid', face: 'top', u: 0, v: -39.5, length: 135, width: 320, travel: 79, rotation: 0 },
+      { kind: 'slider', part: 'lid', face: 'top', u: 0, v: -39.5, length: 121, width: 320, travel: 79, rotation: 0 },
     ],
-    features: [rib('Grip ribs left', 'front', -128, 20, 6), rib('Grip ribs right', 'front', 128, 20, 6)],
+    // Ribs stay on the flat part of the front face (±142 mm with an 18 mm chamfer).
+    features: [rib('Grip ribs left', 'front', -110, 20, 6), rib('Grip ribs right', 'front', 110, 20, 6)],
     colors: { tray: '#1E2126', lid: '#2A2E35', accessories: '#D64541' },
   },
   {
@@ -58,7 +59,7 @@ export const TEMPLATES: CaseTemplate[] = [
     description: 'Hinged clamshell: the screen sits inside the lid and the keyboard in the tray, like a laptop. Magnet closure and a carry handle.',
     kind: 'core',
     params: { ...base, width: 420, depth: 300, trayHeight: 50, lidHeight: 28, wall: 3, floor: 2.6, cornerRadius: 12, closureScrews: 6, hinge: true, closure: 'magnets' },
-    accessories: [{ kind: 'handle', part: 'tray', face: 'front', u: 0, v: 4, length: 140, rotation: 0 }, foot(-185, -125), foot(185, -125), foot(-185, 125), foot(185, 125)],
+    accessories: [{ kind: 'handle', part: 'tray', face: 'front', u: 0, v: 4, length: 140, rotation: 0, style: 'tube', texture: 'ribbed' }, foot(-185, -125), foot(185, -125), foot(-185, 125), foot(185, 125)],
   },
   {
     id: 'suitcase',
@@ -66,7 +67,7 @@ export const TEMPLATES: CaseTemplate[] = [
     description: 'Deep rugged case in the style of a hard-shell equipment case: hinge, magnets, handle, ribs and feet.',
     kind: 'core',
     params: { ...base, width: 460, depth: 340, trayHeight: 150, lidHeight: 50, wall: 3.6, floor: 3, cornerRadius: 16, closureScrews: 6, hinge: true, closure: 'magnets', bevel: 2 },
-    accessories: [{ kind: 'handle', part: 'tray', face: 'front', u: 0, v: 40, length: 160, rotation: 0 }, foot(-200, -140), foot(200, -140), foot(-200, 140), foot(200, 140)],
+    accessories: [{ kind: 'handle', part: 'tray', face: 'front', u: 0, v: 40, length: 160, rotation: 0, style: 'tube', texture: 'knurled' }, foot(-200, -140), foot(200, -140), foot(-200, 140), foot(200, 140)],
     features: [rib('Front ribs left', 'front', -170, 120, 3), rib('Front ribs right', 'front', 170, 120, 3), rib('Back ribs left', 'back', -170, 120, 3), rib('Back ribs right', 'back', 170, 120, 3)],
   },
   {

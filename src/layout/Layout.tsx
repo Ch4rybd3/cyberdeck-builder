@@ -21,6 +21,7 @@ const NAV: { heading: string; items: { to: string; label: string }[] }[] = [
     items: [
       { to: '/bom', label: 'Shopping list' },
       { to: '/print', label: 'Print' },
+      { to: '/assembly', label: 'Assembly' },
       { to: '/identity', label: 'DeckID' },
     ],
   },
