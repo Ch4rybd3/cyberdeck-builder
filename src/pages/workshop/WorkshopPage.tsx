@@ -5,7 +5,9 @@ import { carriedPlacementIds } from '../../geometry/caseBuilder'
 import { intersects, placementBox } from '../../domain/layout'
 import { useBuild } from '../../store/buildStore'
 import { useGeometry } from '../../store/geometryStore'
-import { Box, Layers, MousePointer2, Move3d, Redo2, Rotate3d, Undo2 } from '../../ui/icons'
+import { Box, Camera, IdCard, Layers, MousePointer2, Move3d, Redo2, Rotate3d, Undo2 } from '../../ui/icons'
+import { download } from '../../lib/download'
+import { snapshotJpeg, snapshotPng } from '../../lib/snapshot'
 import { Aside, PageShell, Segmented, Toggle } from '../../ui/primitives'
 import { ChecksPanel, useChecks } from './ChecksPanel'
 import { Inspector } from './Inspector'
@@ -53,6 +55,28 @@ export function WorkshopPage() {
       subtitle={geo.busy ? 'Rebuilding geometry…' : geo.result ? `${geo.result.pieces.length} pieces · ${geo.result.durationMs.toFixed(0)} ms` : geo.error ?? 'Loading geometry kernel…'}
       actions={
         <div className="toolbar">
+          <div className="toolbar-group">
+            <button
+              className="btn-ghost"
+              title="Snapshot: download the 3D view as a PNG"
+              onClick={() => {
+                const png = snapshotPng()
+                if (png) download(dataUrlBytes(png), `${build.name.replace(/[^\w-]+/g, '-').toLowerCase()}.png`, 'image/png')
+              }}
+            >
+              <Camera size={15} />
+            </button>
+            <button
+              className="btn-ghost"
+              title="Use the 3D view as the DeckID photo"
+              onClick={() => {
+                const jpg = snapshotJpeg()
+                if (jpg) useBuild.getState().update(b => void (b.identity.photo = jpg))
+              }}
+            >
+              <IdCard size={15} />
+            </button>
+          </div>
           <div className="toolbar-group">
             <button className="btn-ghost" disabled={!canUndo} onClick={undo} title="Undo (Ctrl+Z)"><Undo2 size={15} /></button>
             <button className="btn-ghost" disabled={!canRedo} onClick={redo} title="Redo (Ctrl+Shift+Z)"><Redo2 size={15} /></button>
@@ -225,4 +249,11 @@ function ViewportOverlay() {
       )}
     </>
   )
+}
+
+function dataUrlBytes(url: string): Uint8Array {
+  const bin = atob(url.split(',')[1])
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
 }

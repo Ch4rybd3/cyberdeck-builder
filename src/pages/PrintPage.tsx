@@ -4,6 +4,7 @@ import { INSERTS } from '../domain/hardware'
 import { MATERIALS, PRINTERS, printerById } from '../domain/printers'
 import type { InsertSize, PrintSettings } from '../domain/schema'
 import { binaryStl, orientPiece, slug, stlZip, threeMf } from '../geometry/export'
+import { stepFile } from '../geometry/step'
 import { download } from '../lib/download'
 import { useBuild } from '../store/buildStore'
 import { Plates } from './print/Plates'
@@ -38,6 +39,14 @@ export function PrintPage() {
       subtitle={busy ? 'Rebuilding…' : undefined}
       actions={
         <>
+          <button
+            className="btn-secondary flex items-center gap-1.5"
+            disabled={!result}
+            title="Faceted solids, assembled, for FreeCAD, Fusion 360, Onshape or SolidWorks"
+            onClick={() => result && download(stepFile(build.name, result.pieces), `${slug(build.name)}.step`, 'model/step')}
+          >
+            <Download size={14} /> STEP (CAD)
+          </button>
           <button className="btn-secondary flex items-center gap-1.5" disabled={!result} onClick={() => result && download(stlZip(build.name, result.pieces), `${slug(build.name)}-stl.zip`, 'application/zip')}>
             <Download size={14} /> STL (zip)
           </button>

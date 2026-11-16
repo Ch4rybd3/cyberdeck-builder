@@ -66,6 +66,7 @@ export type { LucideIcon }
 
 export {
   AlertTriangle,
+  IdCard,
   ArrowLeft,
   Box,
   Camera,

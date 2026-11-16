@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -275,6 +275,8 @@ export const Build = z.object({
   updatedAt: z.string(),
   case: Case,
   customComponents: z.array(CustomComponent).default([]),
+  /** Shopping list edits, keyed by line: your own unit prices, and what you already have. */
+  bom: z.object({ prices: z.record(z.number().min(0)).default({}), owned: z.record(z.boolean()).default({}) }).default({}),
   placements: z.array(Placement).default([]),
   features: z.array(Feature).default([]),
   accessories: z.array(Accessory).default([]),

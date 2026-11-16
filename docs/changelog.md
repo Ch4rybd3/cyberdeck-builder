@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.0 (2026-11-16)
+
+First complete version.
+
+- **STEP export** (Print page): every piece as a named faceted solid, assembled, for FreeCAD, Fusion 360, Onshape or SolidWorks. Coplanar triangles are merged into flat faces with holes.
+- **Editable shopping list**: your own unit prices (↺ restores the catalog price) and an **owned** tick per line; the **To buy** total counts only what is left. Edits are saved in the build and exported in the CSV.
+- **Snapshots**: download the 3D view as a PNG, or set it as the DeckID photo, from the Workshop.
+- Build schema 10 (older builds migrate automatically).
+
 ## 0.10.0 (2026-11-16)
 
 - **Print plates**: the Print page packs the pieces onto the printer's bed, draws each plate from above with the real outlines, gives a rough time and filament weight per plate, and exports each plate as a laid-out 3MF.

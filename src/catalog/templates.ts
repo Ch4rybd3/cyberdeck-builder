@@ -125,6 +125,7 @@ export function newBuild(templateId: string, name?: string): Build {
     updatedAt: now,
     case: { template: t.id, params: { ...t.params }, colors: { ...(t.colors ?? DEFAULT_COLORS) } },
     customComponents: [],
+    bom: { prices: {}, owned: {} },
     placements: [],
     features: (t.features ?? []).map(f => ({ ...structuredClone(f), id: uid('ft') })),
     accessories: t.accessories.map(a => ({ ...a, id: uid('acc') })),

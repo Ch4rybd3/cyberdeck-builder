@@ -43,6 +43,8 @@ Select *Case & build settings* in the **Outline** tab to change dimensions, wall
 
 ## 5. Print and buy
 
+On the **Shopping list**, type your supplier's price over any line and tick what you already have: the **To buy** total only counts the rest, and your edits are saved in the build.
+
 Choose your printer on **Print**. Parts larger than the bed are split automatically and joined with heat-set inserts. Export a **3MF** (multi-colour) or a zip of **STL** files. The **Shopping list** counts every insert, screw, magnet and hinge pin the case needs.
 
 ![The Print page](./images/print.png)

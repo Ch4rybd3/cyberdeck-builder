@@ -86,7 +86,8 @@ export function Viewport({ collisions }: { collisions: Set<string> }) {
       key={`${build.id}:${view.camera}:${view.cameraRev}`}
       camera={{ position: presets[view.camera], fov: 40, near: 1, far: 10000 }}
       dpr={[1, 2]}
-      gl={{ antialias: true }}
+      // Kept so a snapshot can read the frame back (Workshop → Snapshot).
+      gl={{ antialias: true, preserveDrawingBuffer: true }}
       onPointerMissed={() => {
         // A press on a gizmo handle hits no scene object; it must not deselect (and unmount) the gizmo.
         if (gizmoBusy()) return
@@ -94,6 +95,7 @@ export function Viewport({ collisions }: { collisions: Set<string> }) {
       }}
       style={{ background: `#${colors.canvas.getHexString()}` }}
     >
+      <color attach="background" args={[colors.canvas]} />
       <hemisphereLight args={[colors.white, colors.canvas, 0.9]} />
       <ambientLight intensity={0.35} />
       <directionalLight position={[300, -400, 600]} intensity={1.6} />

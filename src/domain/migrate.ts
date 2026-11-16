@@ -57,6 +57,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 9
     v = 9
   }
+  // 9 → 10: shopping list price overrides and owned items (default empty).
+  if (v === 9) {
+    obj.schemaVersion = 10
+    v = 10
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

@@ -22,6 +22,15 @@ Components are drawn as their envelope boxes. A selected component is outlined i
 
 The **Iso / Top / Front / Side** buttons in the top-left corner of the viewport set the camera. Click the active one again to reset the view after orbiting.
 
+### Snapshots
+
+Two buttons at the top right of the Workshop capture the 3D view as it is on screen:
+
+- **camera**: download it as a PNG;
+- **card**: use it as the build's **DeckID photo**.
+
+Set the camera (Iso / Top / Front / Side, or orbit), the lid and the explode first.
+
 ### Tools: Select, Move, Rotate
 
 The **Tool** buttons at the left of the toolbar decide what the mouse does to components.

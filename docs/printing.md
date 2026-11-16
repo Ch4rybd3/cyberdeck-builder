@@ -22,6 +22,12 @@ For each plate you get the piece count, the colours, a filament weight and a **r
 
 The download button on each plate exports a **3MF of that plate, laid out as shown**, ready to slice.
 
+## STEP export for CAD
+
+**STEP (CAD)** on the Print page writes every piece as a named solid, in assembled position, in one `.step` file (AP214). It opens in FreeCAD, Fusion 360, Onshape or SolidWorks, where you can measure, cut, fillet or add your own features.
+
+The solids are **faceted**: coplanar triangles are merged into flat faces with their holes, so walls and plates are single faces, but curved surfaces (rounded corners, the knurled grip) stay as many small flat faces. It is a mesh-accurate solid, not a parametric model. A build with a knurled grip gives a large file (around 20 MB).
+
 ## Heat-set inserts
 
 The case is held together with brass heat-set inserts, never by screwing into bare plastic. The rule is the same everywhere: **one side receives the insert, the other side gets a clearance hole, and the screw is driven from that far side**, so it clamps the two parts together.

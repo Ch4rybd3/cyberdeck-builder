@@ -24,6 +24,10 @@ export interface BomLine {
   supplier: string
   url?: string
   note?: string
+  /** Catalog or estimated price, before your override. */
+  listPrice?: number
+  /** You already have it: left out of the "to buy" total. */
+  owned?: boolean
 }
 
 /** Shells are mostly perimeters, so effective density sits well above the infill setting. */
@@ -139,6 +143,13 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
     const m = Math.max(0.5, Math.ceil(mm / 100) / 10)
     lines.push({ key: `w:${awg}`, category: 'Wiring', name: `Silicone wire ${awg} AWG, red + black`, qty: m, unit: 'm', unitPrice: 0.8, supplier: 'Any', note: 'Estimated from the wiring diagram' })
   }
+  // Your edits: price overrides and owned items, kept in the build.
+  const edits = build.bom ?? { prices: {}, owned: {} }
+  for (const l of lines) {
+    l.listPrice = l.unitPrice
+    if (edits.prices[l.key] !== undefined) l.unitPrice = edits.prices[l.key]
+    l.owned = Boolean(edits.owned[l.key])
+  }
   return lines
 }
 
@@ -146,12 +157,17 @@ export function bomTotal(lines: BomLine[]): number {
   return lines.reduce((a, l) => a + l.qty * l.unitPrice, 0)
 }
 
+/** What is left to buy: the total without the lines you already have. */
+export function bomToBuy(lines: BomLine[]): number {
+  return bomTotal(lines.filter(l => !l.owned))
+}
+
 export function bomCsv(lines: BomLine[]): string {
   const esc = (v: string | number) => {
     const s = String(v)
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const header = ['Category', 'Item', 'Qty', 'Unit', 'Unit price (EUR)', 'Total (EUR)', 'Supplier', 'URL', 'Note']
-  const rows = lines.map(l => [l.category, l.name, l.qty, l.unit, l.unitPrice.toFixed(3), (l.qty * l.unitPrice).toFixed(2), l.supplier, l.url ?? '', l.note ?? ''])
+  const header = ['Category', 'Item', 'Qty', 'Unit', 'Unit price (EUR)', 'Total (EUR)', 'Owned', 'Supplier', 'URL', 'Note']
+  const rows = lines.map(l => [l.category, l.name, l.qty, l.unit, l.unitPrice.toFixed(3), (l.qty * l.unitPrice).toFixed(2), l.owned ? 'yes' : '', l.supplier, l.url ?? '', l.note ?? ''])
   return [header, ...rows].map(r => r.map(esc).join(',')).join('\n')
 }
