@@ -41,6 +41,9 @@ export function analysePorts(build: Build): PortReport {
   const sockets = build.accessories.filter(a => a.kind === 'deckport')
   if (build.kind === 'module' && sockets.length) providers.push({ id: DECKPORT_NODE, provides: { 'usb-a': 1, i2c: 8 } })
   if (build.kind === 'core') sockets.forEach(s => consumers.push({ id: `deckport:${s.id}`, consumes: { 'usb-a': 1 } }))
+  // A USB-C port beside a rail is fed from one of the Core's USB ports too.
+  if (build.kind === 'core')
+    build.accessories.filter(a => a.kind === 'picatinny' && a.port && a.port !== 'none').forEach(r => consumers.push({ id: `railport:${r.id}`, consumes: { 'usb-a': 1 } }))
 
   for (const pv of providers) {
     free.set(pv.id, { ...pv.provides })

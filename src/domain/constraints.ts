@@ -9,6 +9,7 @@ import { componentById, syncCustomComponents } from '../catalog/components'
 import { carriedPlacementIds, type GeometryResult } from '../geometry/caseBuilder'
 import { SOCKET_MAX_W } from './deckport'
 import { boxSize, contains, interiorBox, intersects, placementBox } from './layout'
+import { incompatibility, mountPoints, pointLabel } from './modules'
 import { analysePorts } from './ports'
 import { analysePower, fmt } from './power'
 import { printerById } from './printers'
@@ -115,11 +116,27 @@ export function checkBuild(build: Build, geo?: GeometryResult | null, modules: B
     if (peak > SOCKET_MAX_W) push('module', 'high', `This module peaks at ${fmt(peak)} W; one DeckPort socket supplies ${SOCKET_MAX_W} W.`)
     if (power.battery.count === 0 && power.converters.length === 0 && peak > 0)
       push('module', 'info', `Powered from the Core through DeckPort VBUS (${fmt(peak)} W peak).`)
-  } else if (sockets.length) {
-    const used = sockets.filter(s => s.moduleId && modules.some(m => m.id === s.moduleId)).length
-    push('module', 'info', `${sockets.length} DeckPort socket${sockets.length > 1 ? 's' : ''}${used ? `, ${used} with a module attached` : ' ready for modules'}.`)
-    for (const s of sockets) if (s.moduleId && !modules.some(m => m.id === s.moduleId)) push('module', 'low', 'A DeckPort socket points at a module that is not in this library.')
+  } else if (mountPoints(build).length) {
+    const points = mountPoints(build)
+    const rails = points.filter(p => p.kind === 'picatinny').length
+    const used = points.filter(p => p.moduleId && modules.some(m => m.id === p.moduleId)).length
+    const what = [sockets.length && `${sockets.length} socket${sockets.length > 1 ? 's' : ''}`, rails && `${rails} rail${rails > 1 ? 's' : ''}`].filter(Boolean).join(', ')
+    push('module', 'info', `Mounting points: ${what}${used ? `, ${used} with a module attached` : ', ready for modules'}.`)
   }
+  for (const point of mountPoints(build)) {
+    if (!point.moduleId) continue
+    const m = modules.find(x => x.id === point.moduleId)
+    if (!m) {
+      push('module', 'low', `${pointLabel(point)} points at a module that is not in this library.`)
+      continue
+    }
+    const why = incompatibility(point, m)
+    if (why) push('module', 'high', why)
+    else if (point.kind === 'picatinny' && (!point.port || point.port === 'none'))
+      push('module', 'medium', `${m.name} is on a rail with no USB-C port beside it. Set the rail's port to Above or Below, or route its cable elsewhere.`)
+  }
+  if (build.kind === 'module' && sockets[0]?.mount === 'rail' && sockets[0]?.connector === 'pogo')
+    push('module', 'info', 'A rail-mounted module always connects with a USB-C cable; the pogo setting is ignored.')
 
   issues.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity))
   return issues

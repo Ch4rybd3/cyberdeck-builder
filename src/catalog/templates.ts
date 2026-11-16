@@ -95,7 +95,15 @@ export const TEMPLATES: CaseTemplate[] = [
     description: 'Small enclosure with a DeckPort plug on its back, for a module that attaches to a Core.',
     kind: 'module',
     params: { ...base, width: 60, depth: 40, trayHeight: 24, lidHeight: 8, wall: 2.4, floor: 2, cornerRadius: 4, closureInsert: 'M2.5', closureScrews: 4 },
-    accessories: [{ kind: 'deckport', part: 'tray', face: 'back', u: 0, v: 0, length: 40, rotation: 0 }],
+    accessories: [{ kind: 'deckport', part: 'tray', face: 'back', u: 0, v: 0, length: 40, rotation: 0, mount: 'direct', connector: 'pogo' }],
+  },
+  {
+    id: 'module-rail',
+    name: 'Rail module (Picatinny)',
+    description: 'A module with a printed Picatinny clamp on its bottom and a USB-C port on its end, for a Core with accessory rails.',
+    kind: 'module',
+    params: { ...base, width: 70, depth: 44, trayHeight: 24, lidHeight: 8, wall: 2.4, floor: 2.4, cornerRadius: 4, closureInsert: 'M2.5', closureScrews: 4 },
+    accessories: [{ kind: 'deckport', part: 'tray', face: 'bottom', u: 0, v: 0, length: 40, rotation: 0, mount: 'rail', connector: 'usb-c' }],
   },
 ]
 
@@ -203,14 +211,14 @@ export function exampleBuilds(): Build[] {
   ]
 
   // LoRa / Meshtastic radio module, mounted on Vanguard's back socket.
-  const lora = newBuild('module-2u', 'LoRa module')
+  const lora = newBuild('module-rail', 'LoRa module')
   lora.id = 'example-lora-module'
-  lora.identity = { ...lora.identity, codename: 'MOD-LORA', description: 'Heltec LoRa 32 V3 running Meshtastic, in a DeckPort module. SMA antenna through the left side.', tags: ['module', 'lora', 'meshtastic'] }
-  lora.case.params = { ...lora.case.params, width: 70, depth: 40, trayHeight: 22 }
+  lora.identity = { ...lora.identity, codename: 'MOD-LORA', description: 'Heltec LoRa 32 V3 running Meshtastic. Clamps onto a Picatinny rail; USB-C cable to the port past the rail end. SMA antenna through the left side.', tags: ['module', 'lora', 'meshtastic', 'rail'] }
   lora.case.colors = { tray: '#1E2126', lid: '#2A2E35', accessories: '#D64541' }
-  lora.placements = [pl('lora-heltec-v3', 0, -4, { label: 'Heltec V3' }), pl('deckport-pogo-6p', 0, 13, { z: 4, label: 'Pogo connector' })]
+  // Lifted over the clamp's insert bosses in the floor.
+  lora.placements = [pl('lora-heltec-v3', 0, 0, { z: 7, label: 'Heltec V3' })]
   lora.features = [
-    feat({ name: 'SMA antenna hole', part: 'tray', face: 'left', op: 'cut', shape: { kind: 'circle', d: 6.6 }, u: 4, v: 0, depth: 0 }),
+    feat({ name: 'SMA antenna hole', part: 'tray', face: 'left', op: 'cut', shape: { kind: 'circle', d: 6.6 }, u: 0, v: 3, depth: 0 }),
     feat({ name: 'Label', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'text', text: 'LORA', size: 7, font: 'mono' }, u: 0, v: 0, depth: 0.6, color: '#D64541' }),
   ]
 
@@ -219,7 +227,9 @@ export function exampleBuilds(): Build[] {
   gps.id = 'example-gps-module'
   gps.identity = { ...gps.identity, codename: 'MOD-GPS', description: 'u-blox 7 USB receiver in a DeckPort module, for position and a PPS-free time source.', tags: ['module', 'gps'] }
   gps.case.params = { ...gps.case.params, width: 60, depth: 50, trayHeight: 22 }
-  gps.placements = [pl('gps-usb-ublox', 0, -6, { label: 'u-blox 7' }), pl('deckport-pogo-6p', 0, 14, { z: 4, label: 'Pogo connector' })]
+  gps.placements = [pl('gps-usb-ublox', 0, -4, { label: 'u-blox 7' })]
+  gps.accessories = gps.accessories.map(a => (a.kind === 'deckport' ? { ...a, connector: 'usb-c' as const } : a))
+  gps.identity.description += ' Plugs into a USB-C DeckPort socket.'
   gps.features = [feat({ name: 'Label', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'text', text: 'GPS', size: 7, font: 'mono' }, u: 0, v: -4, depth: 0.6, color: '#2DD4BF' })]
 
   // Tactical deck: the 7" display rides on a carriage that slides back to uncover the keyboard.
@@ -228,7 +238,7 @@ export function exampleBuilds(): Build[] {
   vanguard.identity = {
     ...vanguard.identity,
     codename: 'VGD-03',
-    description: 'Faceted Pi 5 field deck. The 7" display rides on a sliding carriage that covers the keyboard for transport and slides back to uncover it. Side grip, accessory rail, and a LoRa module on its back DeckPort socket.',
+    description: 'Faceted Pi 5 field deck. The 7" display rides on a sliding carriage that covers the keyboard for transport and slides back to uncover it. Side grip, a LoRa module clamped on its right Picatinny rail, and a free DeckPort socket at the back.',
     tags: ['pi5', 'tactical', 'slider'],
   }
   const vDisplay = pl('rpi-touch-display-2-7', 0, 0, { part: 'lid', window: false, standoffs: false, label: 'Display (on slider)' })
@@ -243,7 +253,10 @@ export function exampleBuilds(): Build[] {
   ]
   const slider = vanguard.accessories.find(a => a.kind === 'slider')!
   slider.targetId = vDisplay.id
-  vanguard.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'back', u: -60, v: 0, length: 40, rotation: 0, moduleId: lora.id })
+  vanguard.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'back', u: -60, v: 0, length: 40, rotation: 0 })
+  // The LoRa module rides on the right rail, cabled to a USB-C port past the rail's end.
+  const vRail = vanguard.accessories.find(a => a.kind === 'picatinny')!
+  Object.assign(vRail, { moduleId: lora.id, port: 'end', moduleAt: 0 })
   lora.targetCore = { id: vanguard.id, name: vanguard.name }
   vanguard.features.push(feat({ name: 'Front label', part: 'tray', face: 'front', op: 'inlay', shape: { kind: 'text', text: 'VGD-03', size: 7, font: 'mono' }, u: 0, v: 0, depth: 0.6, color: '#D64541' }))
   vanguard.features.push(feat({ name: 'Bottom vents', part: 'tray', face: 'bottom', op: 'cut', shape: { kind: 'slot', w: 50, h: 3 }, u: -95, v: -60, depth: 0, pattern: { nu: 1, nv: 6, du: 0, dv: 7 } }))
@@ -254,7 +267,7 @@ export function exampleBuilds(): Build[] {
   courier.identity = {
     ...courier.identity,
     codename: 'CRR-04',
-    description: 'Briefcase deck that opens like a laptop: 10.1" screen in the lid, 60% keyboard, SDR and LoRa radios and a USB hub in the tray, and a GPS module on its right DeckPort socket. Hinged on a 3 mm steel pin, held shut by magnets.',
+    description: 'Briefcase deck that opens like a laptop: 10.1" screen in the lid, 60% keyboard, SDR and LoRa radios and a USB hub in the tray, and a GPS module on its right USB-C DeckPort socket. Hinged on a 3 mm steel pin, held shut by magnets.',
     tags: ['pi5', 'briefcase', 'radio'],
   }
   courier.placements = [
@@ -269,7 +282,7 @@ export function exampleBuilds(): Build[] {
     pl('charger-1s-usbc', 40, 100, { label: 'Charger' }),
     pl('panel-usb-c', 199, 100, { rotation: 90, label: 'Charge port' }),
   ]
-  courier.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: -60, v: 0, length: 40, rotation: 0, moduleId: gps.id })
+  courier.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: -60, v: 0, length: 40, rotation: 0, connector: 'usb-c', moduleId: gps.id })
   gps.targetCore = { id: courier.id, name: courier.name }
   courier.features = [
     feat({ name: 'Bottom vents', part: 'tray', face: 'bottom', op: 'cut', shape: { kind: 'slot', w: 60, h: 3 }, u: -120, v: -60, depth: 0, pattern: { nu: 1, nv: 6, du: 0, dv: 7 } }),

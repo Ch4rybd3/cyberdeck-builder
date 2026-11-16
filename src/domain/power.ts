@@ -9,6 +9,7 @@
  */
 import { componentById, syncCustomComponents } from '../catalog/components'
 import { DECKPORT_VERSION, SOCKET_MAX_W } from './deckport'
+import { incompatibility, mountPoints } from './modules'
 import type { CatalogComponent, Rail } from '../catalog/types'
 import type { Build, Placement } from './schema'
 
@@ -88,9 +89,9 @@ export function moduleDraw(module: Build): { typW: number; peakW: number } {
 export function analysePower(build: Build, modules: Build[] = []): PowerReport {
   // Modules first: each one syncs its own custom components, so the Core is resolved after.
   const attached = build.kind === 'core'
-    ? build.accessories.flatMap(acc => {
-        const m = acc.kind === 'deckport' && acc.moduleId ? modules.find(x => x.id === acc.moduleId) : undefined
-        return m ? [{ acc, module: m, draw: moduleDraw(m) }] : []
+    ? mountPoints(build).flatMap(acc => {
+        const m = acc.moduleId ? modules.find(x => x.id === acc.moduleId) : undefined
+        return m && !incompatibility(acc, m) ? [{ acc, module: m, draw: moduleDraw(m) }] : []
       })
     : []
   const items = resolveItems(build)

@@ -43,11 +43,25 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
     if (!c) continue
     lines.push({ key: `c:${id}`, category: 'Electronics', name: c.name, qty, unit: 'pcs', unitPrice: c.price, supplier: c.supplier, url: c.url })
   }
-  const sockets = build.accessories.filter(a => a.kind === 'deckport').length
-  if (sockets && !groups.has('deckport-pogo-6p')) {
+  // DeckPort connectors, from the sockets, rail ports and module plugs.
+  const plugs = build.accessories.filter(a => a.kind === 'deckport')
+  const pogo = plugs.filter(a => (a.connector ?? 'pogo') === 'pogo' && !(build.kind === 'module' && a.mount === 'rail')).length
+  const usbReceptacles =
+    plugs.filter(a => a.connector === 'usb-c' && build.kind === 'core').length +
+    plugs.filter(a => build.kind === 'module' && a.mount === 'rail').length +
+    build.accessories.filter(a => a.kind === 'picatinny' && a.port && a.port !== 'none').length
+  const usbPlugs = plugs.filter(a => build.kind === 'module' && a.connector === 'usb-c' && a.mount !== 'rail').length
+  const railCables = plugs.filter(a => build.kind === 'module' && a.mount === 'rail').length
+  if (pogo && !groups.has('deckport-pogo-6p')) {
     const c = componentById('deckport-pogo-6p')!
-    lines.push({ key: 'c:deckport', category: 'Electronics', name: c.name, qty: sockets, unit: 'pcs', unitPrice: c.price, supplier: c.supplier, note: 'One per DeckPort socket' })
+    lines.push({ key: 'c:deckport', category: 'Electronics', name: c.name, qty: pogo, unit: 'pcs', unitPrice: c.price, supplier: c.supplier, note: build.kind === 'core' ? 'One per DeckPort socket' : 'The module half' })
   }
+  if (usbReceptacles)
+    lines.push({ key: 'c:usbc-f', category: 'Electronics', name: 'USB-C female receptacle, panel mount, with 5.1 kΩ / 10 kΩ CC resistors', qty: usbReceptacles, unit: 'pcs', unitPrice: 3, supplier: 'Any (USB-C breakout)', note: build.kind === 'core' ? 'Core side: 10 kΩ pull-up on CC' : 'Module side: 5.1 kΩ pull-down on CC' })
+  if (usbPlugs)
+    lines.push({ key: 'c:usbc-m', category: 'Electronics', name: 'USB-C male plug breakout', qty: usbPlugs, unit: 'pcs', unitPrice: 3, supplier: 'Any', note: 'Plugs into the Core socket' })
+  if (railCables)
+    lines.push({ key: 'c:usbc-cable', category: 'Wiring', name: 'USB-C to USB-C cable, 10 cm, right-angle', qty: railCables, unit: 'pcs', unitPrice: 4, supplier: 'Any (USB 2.0 is enough)', note: 'From the module to the port beside the rail' })
 
   // Hardware
   if (geo) {
@@ -71,6 +85,8 @@ export function buildBom(build: Build, geo?: GeometryResult | null): BomLine[] {
 
     if (geo.hardware.magnets)
       lines.push({ key: 'h:magnets', category: 'Hardware', name: 'Neodymium disc magnet Ø6 × 3 mm (N52)', qty: geo.hardware.magnets, unit: 'pcs', unitPrice: 0.15, supplier: 'Any', note: 'Press-fit; mind the polarity — see Printing' })
+    if (geo.hardware.railBolts)
+      lines.push({ key: 'h:railbolt', category: 'Hardware', name: 'M4 × 40 socket head bolt + M4 nyloc nut', qty: geo.hardware.railBolts, unit: 'sets', unitPrice: 0.3, supplier: 'Any', note: 'Rail clamp cross bolt' })
     if (geo.hardware.hingePin)
       lines.push({ key: 'h:pin', category: 'Hardware', name: `Steel rod Ø3 mm, cut to ${geo.hardware.hingePin.length} mm`, qty: geo.hardware.hingePin.count, unit: 'pcs', unitPrice: 1.5, supplier: 'Any (silver steel, or M3 threaded rod)', note: 'Hinge pin' })
 

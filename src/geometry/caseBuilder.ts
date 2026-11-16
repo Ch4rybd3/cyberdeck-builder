@@ -20,10 +20,11 @@
 import type { CrossSection, Manifold, ManifoldToplevel, Mat4, Vec2 } from 'manifold-3d'
 
 import { componentById, syncCustomComponents } from '../catalog/components'
-import { SOCKET } from '../domain/deckport'
+import { RAIL_MOUNT, SOCKET, USB_C } from '../domain/deckport'
 import { INSERTS, screwLength, type FastenerUse, type InsertSpec } from '../domain/hardware'
 import {
   faceFrame,
+  faceSize,
   frameMatrix,
   partOffsetZ,
   placementBox,
@@ -37,7 +38,7 @@ import {
   type V3,
 } from '../domain/layout'
 import { BED_MARGIN, printerById } from '../domain/printers'
-import type { Accessory, Build, Feature, PartId, Shape } from '../domain/schema'
+import type { Accessory, Build, Face, Feature, PartId, Shape } from '../domain/schema'
 import { Scope } from './kernel'
 import { fontsReady, textContours } from './text'
 
@@ -87,6 +88,8 @@ export interface CarriedDisplay {
 export interface HardwareUse {
   magnets: number
   hingePin: { count: number; length: number } | null
+  /** Rail clamps on a module: one M4 cross bolt and nyloc nut each. */
+  railBolts: number
 }
 
 export interface GeometryIssue {
@@ -285,7 +288,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
   // Screws: inserts in the tray rim, counterbored screws through the lid.
   // Magnets: Ø6 × 3 mm discs pressed into matching pockets in both bosses.
   // With a hinge, only the front positions are used — the hinge holds the back.
-  const hardware: HardwareUse = { magnets: 0, hingePin: null }
+  const hardware: HardwareUse = { magnets: 0, hingePin: null, railBolts: 0 }
   {
     const spec = INSERTS[p.closureInsert]
     const magnet = { d: 6.2, h: 3.2 }
@@ -467,8 +470,13 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     }
 
     if (acc.kind === 'deckport') {
-      const win = SOCKET.connectorWindow
-      const winCS = rrect(rot === 90 ? win.h : win.w, rot === 90 ? win.w : win.h, 0.5)
+      if (isModule && acc.mount === 'rail') {
+        buildRailClamp(acc, f)
+        continue
+      }
+      const usb = acc.connector === 'usb-c'
+      const win = usb ? (isModule ? USB_C.plugWindow : USB_C.receptacle) : { ...SOCKET.connectorWindow, r: 0.5 }
+      const winCS = rrect(rot === 90 ? win.h : win.w, rot === 90 ? win.w : win.h, win.r)
       if (!isModule) {
         // Core socket: alignment recess, connector window, four inserts.
         const rec = SOCKET.recess
@@ -502,6 +510,19 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     if (acc.kind === 'picatinny') {
       name = `Picatinny rail ${acc.length} mm`
       const L = acc.length
+      // USB-C port beside the rail, for a rail-mounted module's cable.
+      if (acc.port && acc.port !== 'none') {
+        // Offsets in the rail's own axes: along it, and across it.
+        const along = acc.port === 'start' ? -(L / 2 + RAIL_MOUNT.portPastEnd) : acc.port === 'end' ? L / 2 + RAIL_MOUNT.portPastEnd : 0
+        const across = acc.port === 'above' ? RAIL_MOUNT.portOffset : acc.port === 'below' ? -RAIL_MOUNT.portOffset : 0
+        const [du, dv] = rot === 90 ? [across, along] : [along, across]
+        const r = USB_C.receptacle
+        const [cw, ch] = rot === 90 && (acc.port === 'start' || acc.port === 'end') ? [r.h, r.w] : [r.w, r.h]
+        const size = faceSize(p, acc.part, acc.face)
+        if (Math.abs(acc.u + du) + cw / 2 + 1 > size.u / 2 || Math.abs(acc.v + dv) + ch / 2 + 1 > size.v / 2)
+          issues.push({ severity: 'medium', message: `The USB-C port ${acc.port === 'start' || acc.port === 'end' ? 'past the' : ''} ${acc.port} of the ${acc.face} rail falls off the face. Pick another side or move the rail.` })
+        else bodies[acc.part].cut.push(inFrame(extrudeZ(rrect(cw, ch, r.r), -f.thickness - 2, 1), f, acc.u + du, acc.v + dv))
+      }
       const profile: Vec2[] = [
         [-10.6, 0], [10.6, 0], [10.6, 2], [7.83, 2], [7.83, 3.85], [10.6, 6.62], [7.83, 9.39],
         [-7.83, 9.39], [-10.6, 6.62], [-7.83, 3.85], [-7.83, 2], [-10.6, 2],
@@ -851,6 +872,46 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       issues.push({ severity: 'medium', message: 'The screen carriage is much wider than the lid.' })
   }
 
+  /**
+   * Rail mount on a module: a printed clamp that slides onto the Core's
+   * Picatinny rail and locks with an M4 cross bolt in a slot. Built in a rail
+   * frame (x along the rail, y across, z above the Core face), then mapped to
+   * the module face: u = −x, v = y, n = standoff − z.
+   */
+  function buildRailClamp(acc: Accessory, f: Frame) {
+    const R = RAIL_MOUNT
+    const H = R.standoff
+    const L = R.length
+    const W = R.width
+    let clamp = box([-L / 2, -W / 2, R.jawGap], [L / 2, W / 2, H])
+    // Channel: the rail's dovetail plus 0.3 mm, open at both ends so the clamp slides on.
+    const c = 0.3
+    const profile: Vec2[] = [[-7.83 - c, R.jawGap - 1], [7.83 + c, R.jawGap - 1], [7.83 + c, 3.85], [10.6 + c, 6.62], [7.83 + c, 9.39 + c], [-7.83 - c, 9.39 + c], [-10.6 - c, 6.62], [-7.83 - c, 3.85]]
+    const channel = s.keep(s.keep(s.keep(CS.ofPolygons([profile])).extrude(L + 2)).transform([0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, -L / 2 - 1, 0, 0, 1] as unknown as Mat4))
+    const cuts: Manifold[] = [channel]
+    // M4 cross bolt across the rail, with a head counterbore and a nut trap.
+    const alongY = (r: number, y0: number, y1: number, segs = 0) => s.keep(s.keep(s.keep(M.cylinder(y1 - y0, r, r, segs)).rotate([-90, 0, 0])).translate([0, y0, R.boltZ]))
+    cuts.push(alongY(R.boltD / 2, -W / 2 - 1, W / 2 + 1), alongY(3.8, -W / 2 - 1, -W / 2 + 3), alongY(4.05, W / 2 - 3.4, W / 2 + 1, 6))
+    // Four M3 screws through the jaws into inserts in the module, heads below.
+    for (const [x, y] of R.holes) cuts.push(cylZ(INSERTS.M3.clearanceD / 2, R.jawGap - 1, H + 1, x, y), cylZ(INSERTS.M3.headD / 2, R.jawGap - 1, R.jawGap + 3.6, x, y))
+    clamp = s.keep(clamp.subtract(union(cuts)!))
+    const toModule = [-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, H, 1]
+    const local = s.keep(clamp.transform(toModule as unknown as Mat4))
+    accessoryPieces.push({ id: `acc-${acc.id}-clamp`, acc, m: local, frame: f, name: 'Rail clamp' })
+    const clampT = H - R.jawGap - 3.6
+    for (const [x, y] of R.holes) insertMount(acc.part, f, acc.u - x, acc.v + y, INSERTS.M3, 'deckport', clampT)
+    hardware.railBolts += 1
+    // USB-C receptacle on the module's end face, pointing along the rail, so the
+    // cable runs along it to the Core's port past the rail end.
+    const endFace = END_FACE[acc.face]
+    const fe = faceFrame(p, acc.part, endFace)
+    const r = USB_C.receptacle
+    bodies[acc.part].cut.push(inFrame(extrudeZ(rrect(r.w, r.h, r.r), -fe.thickness - 2, 1), fe, 0, 0))
+    const size = faceSize(p, acc.part, acc.face)
+    if (size.u < L - 0.5 || size.v < W - 0.5)
+      issues.push({ severity: 'medium', message: `The rail clamp (${L} × ${W} mm) is larger than the ${acc.face} face (${Math.round(size.u)} × ${Math.round(size.v)} mm): its screws miss the module. Put the clamp on a larger face, usually the bottom.` })
+  }
+
   function insertMountLid(f: Frame, u: number, v: number, clamp: number) {
     const extra = Math.max(0, spec3.holeDepth + 1.2 - f.thickness)
     bodies.lid.add.push(inFrame(cylZ(spec3.bossD / 2, -f.thickness - extra, -f.thickness + 0.2), f, u, v))
@@ -888,6 +949,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
 }
 
 // ── pure helpers ─────────────────────────────────────────────────────────────
+
+/** The face a face's u axis points at: where a rail-mounted module's USB-C port goes. */
+const END_FACE: Record<Face, Face> = { top: 'right', bottom: 'right', front: 'right', back: 'left', right: 'back', left: 'front' }
 
 function aabbOverlap(a: AABB, b: AABB): boolean {
   return a.min[0] < b.max[0] && a.max[0] > b.min[0] && a.min[1] < b.max[1] && a.max[1] > b.min[1] && a.min[2] < b.max[2] && a.max[2] > b.min[2]

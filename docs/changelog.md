@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 (2026-11-16)
+
+- **DeckPort 1.1**: adds a **USB-C** connector option for sockets and plugs, and a **rail mount**: a printed Picatinny clamp with an M4 cross bolt, and a USB-C cable to a port beside the rail or past its end. Every 1.0 module still fits.
+- **Modules panel** in the sidebar: on a Core, every socket and rail with a menu to pick its module and a shortcut to open it; on a module, how it mounts and the Cores it is on.
+- Rail modules snap to the slot pitch, count on the Core's 5 V budget, reserve a USB port, and are checked for socket/rail and connector compatibility.
+- New format **Rail module (Picatinny)**. The examples now show all three connections: Wayfarer + SDR (pogo socket), Courier + GPS (USB-C socket), Vanguard + LoRa (rail).
+- Shopping list: USB-C receptacles, plugs and cables, and the rail clamp bolt.
+- Build schema 6 (older builds migrate automatically).
+
 ## 0.5.1 (2026-11-16)
 
 - **Restore examples** in the Library puts back any example build that was deleted, without touching the others.

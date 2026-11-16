@@ -9,7 +9,9 @@
  */
 import type { ManifoldToplevel } from 'manifold-3d'
 
+import { PICATINNY_PITCH, RAIL_MOUNT } from '../domain/deckport'
 import { faceFrame, partOffsetZ, type V3 } from '../domain/layout'
+import { modulesFor, mountPoints, pointMount } from '../domain/modules'
 import type { Build } from '../domain/schema'
 import { generateCase, type GeneratedPiece } from './caseBuilder'
 
@@ -51,24 +53,44 @@ function socketPoint(build: Build, part: 'tray' | 'lid', face: Parameters<typeof
   return { f, o }
 }
 
-export function modulesFor(core: Build, library: Build[]): Build[] {
-  const ids = new Set(core.accessories.filter(a => a.kind === 'deckport' && a.moduleId).map(a => a.moduleId!))
-  return library.filter(b => ids.has(b.id) && b.kind === 'module')
+/** Slot centres of a Picatinny rail of length L, from its centre (same rule as the rail generator). */
+export function railSlots(L: number): number[] {
+  const n = Math.max(1, Math.floor((L - 4) / PICATINNY_PITCH))
+  return Array.from({ length: n }, (_, k) => (k - (n - 1) / 2) * PICATINNY_PITCH)
+}
+
+/** Nearest slot to `at` where a clamp of RAIL_MOUNT.length still sits fully on the rail. */
+export function snapToSlot(L: number, at: number): number {
+  const usable = railSlots(L).filter(x => Math.abs(x) + RAIL_MOUNT.length / 2 <= L / 2 + 0.01)
+  const list = usable.length ? usable : railSlots(L)
+  return list.reduce((a, b) => (Math.abs(b - at) < Math.abs(a - at) ? b : a), list[0])
 }
 
 export function attachModules(wasm: ManifoldToplevel, core: Build, modules: Build[]): AttachedModule[] {
   if (core.kind !== 'core') return []
   const out: AttachedModule[] = []
-  for (const acc of core.accessories) {
-    if (acc.kind !== 'deckport' || !acc.moduleId) continue
+  for (const acc of mountPoints(core)) {
+    if (!acc.moduleId) continue
     const mod = modules.find(m => m.id === acc.moduleId)
     const plug = mod?.accessories.find(a => a.kind === 'deckport')
-    if (!mod || !plug) continue
-    const c = socketPoint(core, acc.part, acc.face, acc.u, acc.v)
-    const m = socketPoint(mod, plug.part, plug.face, plug.u, plug.v)
+    if (!mod || !plug || (plug.mount ?? 'direct') !== pointMount(acc)) continue
     const neg = (a: V3): V3 => [-a[0], -a[1], -a[2]]
-    // module socket frame → core socket frame (u flipped, n flipped), then module assembly → module socket frame.
-    const toCore = frameAt(neg(c.f.u), c.f.v, neg(c.f.n), c.o)
+    let toCore: M4
+    if (acc.kind === 'picatinny') {
+      // Rail: the module face sits RAIL_MOUNT.standoff off the Core face, the clamp's
+      // bolt in the slot nearest `moduleAt`. Module u runs along the rail.
+      const at = snapToSlot(acc.length, acc.moduleAt ?? 0)
+      const [du, dv] = acc.rotation === 90 ? [0, at] : [at, 0]
+      const c = socketPoint(core, acc.part, acc.face, acc.u + du, acc.v + dv)
+      const o: V3 = [0, 1, 2].map(k => c.o[k] + c.f.n[k] * RAIL_MOUNT.standoff) as V3
+      toCore = acc.rotation === 90 ? frameAt(c.f.v, c.f.u, neg(c.f.n), o) : frameAt(neg(c.f.u), c.f.v, neg(c.f.n), o)
+    } else {
+      const c = socketPoint(core, acc.part, acc.face, acc.u, acc.v)
+      // module socket frame → core socket frame (u flipped, n flipped).
+      toCore = frameAt(neg(c.f.u), c.f.v, neg(c.f.n), c.o)
+    }
+    const m = socketPoint(mod, plug.part, plug.face, plug.u, plug.v)
+    const normal = faceFrame(core.case.params, acc.part, acc.face).n
     const fromModule = invertFrame(m.f.u, m.f.v, m.f.n, m.o)
     const place = mul(toCore, fromModule)
     const result = generateCase(wasm, mod)
@@ -77,9 +99,11 @@ export function attachModules(wasm: ManifoldToplevel, core: Build, modules: Buil
       moduleId: mod.id,
       name: mod.name,
       attachedTo: acc.part,
-      normal: c.f.n,
-      pieces: result.pieces.map(p => ({ ...p, id: `mod-${acc.id}-${p.id}`, assembly: mul(place, p.assembly), explode: c.f.n, attachedTo: acc.part, slide: undefined })),
+      normal,
+      pieces: result.pieces.map(p => ({ ...p, id: `mod-${acc.id}-${p.id}`, assembly: mul(place, p.assembly), explode: normal, attachedTo: acc.part, slide: undefined })),
     })
   }
   return out
 }
+
+export { modulesFor }

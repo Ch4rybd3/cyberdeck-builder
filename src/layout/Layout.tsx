@@ -2,6 +2,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 import { ErrorBoundary } from '../ui/ErrorBoundary'
+import { ModulesPanel } from './ModulesPanel'
 
 import { useBuild } from '../store/buildStore'
 import { Moon, NAV_ICON, Sun } from '../ui/icons'
@@ -109,6 +110,7 @@ export function Layout() {
           <div className="text-ui text-fg truncate" title={build.name}>{build.name}</div>
           <div className="text-label font-mono text-fg-muted uppercase">{build.kind} · DeckPort {build.deckport}</div>
         </div>
+        <ModulesPanel />
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {NAV.map(section => (
             <div key={section.heading}>

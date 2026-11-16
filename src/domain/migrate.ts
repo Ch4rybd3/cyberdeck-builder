@@ -37,6 +37,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 5
     v = 5
   }
+  // 5 → 6: DeckPort 1.1 — USB-C connector, rail-mounted modules (all optional).
+  if (v === 5) {
+    obj.schemaVersion = 6
+    v = 6
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

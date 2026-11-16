@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -99,8 +99,16 @@ export const Accessory = z.object({
   travel: z.number().min(0).optional(),
   /** Slider: the display placement the carriage holds. */
   targetId: z.string().optional(),
-  /** DeckPort socket on a Core: the module build (from the library) shown attached to it. */
+  /** DeckPort socket or Picatinny rail on a Core: the module build (from the library) mounted on it. */
   moduleId: z.string().optional(),
+  /** DeckPort: electrical connector — 8-pin pogo block, or USB-C. */
+  connector: z.enum(['pogo', 'usb-c']).optional(),
+  /** DeckPort plug on a module: mounts directly on a socket, or clamps onto a Picatinny rail. */
+  mount: z.enum(['direct', 'rail']).optional(),
+  /** Picatinny rail on a Core: USB-C port for a rail-mounted module's cable — beside the rail, or past one of its ends. */
+  port: z.enum(['none', 'above', 'below', 'start', 'end']).optional(),
+  /** Picatinny rail on a Core: where the module sits along the rail, from its centre (snapped to the slot pitch). */
+  moduleAt: z.number().optional(),
 })
 export type Accessory = z.infer<typeof Accessory>
 

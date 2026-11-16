@@ -10,7 +10,9 @@ import { ComponentEditor } from './ComponentEditor'
 import { useState } from 'react'
 import { CATEGORY_DATA_SLOT, PORT_LABEL, type PortType } from '../../catalog/types'
 import { TEMPLATES } from '../../catalog/templates'
-import { SOCKET, SOCKET_MAX_W } from '../../domain/deckport'
+import { PICATINNY_PITCH, RAIL_MOUNT, SOCKET, SOCKET_MAX_W } from '../../domain/deckport'
+import { connectorOf, incompatibility } from '../../domain/modules'
+import { snapToSlot } from '../../geometry/attach'
 import { fmt, moduleDraw } from '../../domain/power'
 import { sliderGeometry } from '../../geometry/caseBuilder'
 import { faceSize } from '../../domain/layout'
@@ -18,7 +20,7 @@ import { FACES, type Accessory, type Build, type Feature, type Quarter, type Sha
 import { uid } from '../../lib/id'
 import { useBuild } from '../../store/buildStore'
 import { Copy, RotateCw, Trash2 } from '../../ui/icons'
-import { ColorField, DataDot, NumberField, Section, Segmented, SelectField, Tag, TextField, Toggle } from '../../ui/primitives'
+import { Callout, ColorField, DataDot, NumberField, Section, Segmented, SelectField, Tag, TextField, Toggle } from '../../ui/primitives'
 
 const FACE_OPTS = FACES.map(f => ({ value: f, label: f[0].toUpperCase() + f.slice(1) }))
 const PART_OPTS = [
@@ -468,30 +470,57 @@ const ACC_LABEL: Record<Accessory['kind'], string> = {
   deckport: 'DeckPort',
 }
 
-/** A Core socket: pick a library module to mount on it, see what it draws. */
-function ModuleSocket({ acc }: { acc: Accessory }) {
+/** A Core mounting point (socket or rail): pick a library module for it, see what it draws. */
+function ModulePoint({ acc }: { acc: Accessory }) {
   const library = useBuild(s => s.library)
   const edit = useEdit()
   const open = useBuild(s => s.open)
   const modules = library.filter(b => b.kind === 'module')
+  const fits = modules.filter(m => !incompatibility(acc, m))
   const current = modules.find(m => m.id === acc.moduleId)
+  const why = current ? incompatibility(acc, current) : null
   const draw = current ? moduleDraw(current) : null
+  const rail = acc.kind === 'picatinny'
+  const set = (key: string, fn: (t: Accessory) => void) =>
+    edit(`acc.${acc.id}.${key}`, b => {
+      const t = b.accessories.find(q => q.id === acc.id)
+      if (t) fn(t)
+    })
+  const sideLabels = acc.rotation === 90 ? ['Right of the rail', 'Left of the rail', 'Past the bottom end', 'Past the top end'] : ['Above the rail', 'Below the rail', 'Past the left end', 'Past the right end']
   return (
-    <Section title="Attached module" numeral="02">
+    <Section title={rail ? 'Module on this rail' : 'Attached module'} numeral="02">
       <div className="space-y-2">
         <SelectField
           label="Module"
           value={acc.moduleId ?? ''}
-          options={[{ value: '', label: modules.length ? 'None' : 'No module in the library yet' }, ...modules.map(m => ({ value: m.id, label: `${m.name}${m.identity.codename ? ` · ${m.identity.codename}` : ''}` }))]}
-          onChange={v =>
-            edit(`acc.${acc.id}.module`, b => {
-              const t = b.accessories.find(q => q.id === acc.id)
-              if (t) t.moduleId = v || undefined
-            })
-          }
-          hint="Shown mounted on this socket in the viewport; its draw counts in this Core's power budget."
+          options={[
+            { value: '', label: fits.length ? 'None' : rail ? 'No rail-mount module in the library' : 'No matching module in the library' },
+            ...fits.map(m => ({ value: m.id, label: `${m.name}${m.identity.codename ? ` · ${m.identity.codename}` : ''}` })),
+            ...(current && why ? [{ value: current.id, label: `${current.name} (does not fit)` }] : []),
+          ]}
+          onChange={v => set('module', t => void (t.moduleId = v || undefined))}
+          hint={rail ? 'Modules with a rail clamp. They slide onto this rail and lock with an M4 cross bolt in a slot.' : `Modules with a ${connectorOf(acc) === 'usb-c' ? 'USB-C' : 'pogo'} DeckPort plug.`}
         />
-        {current && draw && (
+        {why && <Callout tone="warn">{why}</Callout>}
+        {rail && (
+          <>
+            <NumberField label="Position along the rail" unit="mm" step={PICATINNY_PITCH} value={acc.moduleAt ?? 0} onChange={v => set('at', t => void (t.moduleAt = snapToSlot(t.length, v)))} hint="Snaps to the slot pitch (10.01 mm) so the cross bolt sits in a slot." />
+            <SelectField
+              label="USB-C port beside the rail"
+              value={acc.port ?? 'none'}
+              options={[
+                { value: 'none', label: 'None' },
+                { value: 'above', label: sideLabels[0] },
+                { value: 'below', label: sideLabels[1] },
+                { value: 'start', label: sideLabels[2] },
+                { value: 'end', label: sideLabels[3] },
+              ]}
+              onChange={v => set('port', t => void (t.port = v))}
+              hint={`For the module's cable: ${RAIL_MOUNT.portOffset} mm beside the rail, or ${RAIL_MOUNT.portPastEnd} mm past an end. The module's own port faces along the rail.`}
+            />
+          </>
+        )}
+        {current && draw && !why && (
           <>
             <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-ui">
               <dt className="text-fg-muted">Draw on VBUS</dt>
@@ -506,6 +535,48 @@ function ModuleSocket({ acc }: { acc: Accessory }) {
         )}
       </div>
     </Section>
+  )
+}
+
+/** DeckPort connector and mount options. */
+function DeckPortOptions({ acc }: { acc: Accessory }) {
+  const build = useBuild(s => s.build)
+  const edit = useEdit()
+  const set = (key: string, fn: (t: Accessory) => void) =>
+    edit(`acc.${acc.id}.${key}`, b => {
+      const t = b.accessories.find(q => q.id === acc.id)
+      if (t) fn(t)
+    })
+  const isModule = build.kind === 'module'
+  const rail = isModule && acc.mount === 'rail'
+  return (
+    <div className="space-y-2">
+      {isModule && (
+        <Field2 label="Mounts">
+          <Segmented
+            value={acc.mount ?? 'direct'}
+            onChange={v => set('mount', t => void (t.mount = v))}
+            options={[
+              { value: 'direct', label: 'On a socket', title: 'Plugs straight into a DeckPort socket on the Core' },
+              { value: 'rail', label: 'On a Picatinny rail', title: 'Clamps onto a rail on the Core, with a USB-C cable to a port beside the rail' },
+            ]}
+          />
+        </Field2>
+      )}
+      {!rail && (
+        <Field2 label="Connector">
+          <Segmented
+            value={connectorOf(acc)}
+            onChange={v => set('connector', t => void (t.connector = v))}
+            options={[
+              { value: 'pogo', label: '8-pin pogo', title: '5 V, USB 2.0, I²C, ID and VBAT' },
+              { value: 'usb-c', label: 'USB-C', title: '5 V / 3 A and USB 2.0 through a standard USB-C connector' },
+            ]}
+          />
+        </Field2>
+      )}
+      {rail && <p className="text-label text-fg-muted">A rail clamp is printed as a separate piece and screwed to this face — use the module's largest face, usually the bottom. A USB-C port is cut in the module's end, facing along the rail, for the cable to the Core.</p>}
+    </div>
   )
 }
 
@@ -625,14 +696,17 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
             <Segmented value={acc.rotation} onChange={v => set('rot', t => void (t.rotation = v))} options={[{ value: 0, label: 'Along u' }, { value: 90, label: 'Along v' }]} />
           </Field2>
           {!isPort && <ColorField label="Colour" value={acc.color ?? build.case.colors.accessories} onChange={v => set('color', t => void (t.color = v))} />}
+          {isPort && <DeckPortOptions acc={acc} />}
         </div>
       </Section>
-      {isPort && build.kind === 'core' && <ModuleSocket acc={acc} />}
-      <Section title="How it attaches" numeral={isPort && build.kind === 'core' ? '03' : '02'}>
+      {(isPort || acc.kind === 'picatinny') && build.kind === 'core' && <ModulePoint acc={acc} />}
+      <Section title="How it attaches" numeral={(isPort || acc.kind === 'picatinny') && build.kind === 'core' ? '03' : '02'}>
         <p className="text-ui text-fg-secondary">
           {isPort
             ? build.kind === 'module'
-              ? `Module plug: a ${SOCKET.recess.w - 0.4} × ${SOCKET.recess.h - 0.4} mm key that seats in the Core recess, a connector window and four M3 clearance holes. Screws go from inside the module into the Core's inserts.`
+              ? acc.mount === 'rail'
+                ? `Rail clamp: ${RAIL_MOUNT.length} × ${RAIL_MOUNT.width} mm, slides onto a Picatinny rail and locks with an M4 cross bolt in a slot. Four M3 screws hold it to this face; the module face ends up ${RAIL_MOUNT.standoff} mm from the Core.`
+                : `Module plug: a ${SOCKET.recess.w - 0.4} × ${SOCKET.recess.h - 0.4} mm key that seats in the Core recess, a connector window and four M3 clearance holes. Screws go from inside the module into the Core's inserts.`
               : `Core socket: ${SOCKET.width} × ${SOCKET.height} mm footprint, ${SOCKET.recess.depth} mm alignment recess, ${SOCKET.connectorWindow.w} × ${SOCKET.connectorWindow.h} mm connector window and four M3 heat-set inserts.`
             : 'Printed as a separate piece. M3 heat-set inserts go into bosses behind the case wall; the screws go through counterbored holes in the accessory.'}
         </p>

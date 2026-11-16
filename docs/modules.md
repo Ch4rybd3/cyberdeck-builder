@@ -1,43 +1,68 @@
 # Modules
 
-A module is a small enclosure that plugs into a Core through a DeckPort socket: an SDR, a LoRa radio, a GPS, a second battery, a macro pad.
+## The idea
 
-## Designing a module
+A cyberdeck here is split in two:
 
-1. **Library → DeckPort module (2U × 2U)** creates a module build. It starts with a DeckPort plug on its back face.
-2. Place its electronics in the Workshop as usual.
-3. Module loads on 5 V are powered from the Core through **VBUS**, so no converter is needed. USB and I²C devices take their port from the plug.
-4. The Checks list warns when the module draws more than 15 W, or when the plug is missing.
-5. Fill in its **DeckID**. Optionally note which Core it was designed for.
+- the **Core**: the deck itself, with the computer, screen, keyboard, battery and power supply. You print and assemble it once.
+- **modules**: small add-on cases, each with one job (an SDR, a LoRa radio, a GPS, a macro pad, a second battery). They take power and data from the Core and can be swapped.
 
-## Adding a socket to a Core
+They meet at **mounting points** on the Core. There are two kinds:
 
-Add a **DeckPort** accessory to any face of the Core (Outline → Accessories → +). The Core gets the alignment recess, the connector window and four M3 inserts. Each socket:
+| Mounting point on the Core | Matching side on the module | How it holds | How it connects |
+|---|---|---|---|
+| **DeckPort socket** | DeckPort **plug** | Key in a recess, 4 × M3 screws | Through the socket itself: 8-pin **pogo**, or **USB-C** |
+| **Picatinny rail** | **Rail clamp** | Slides on, M4 cross bolt in a slot | A short **USB-C cable** to a port beside the rail |
 
-- needs one free USB port on the Core (port check),
-- gets a VBUS wire from the Core's 5 V converter on the Wiring page,
-- adds a DeckPort connector to the Shopping list.
+The rules (power, pinout, dimensions) are in the [DeckPort specification](./deckport.md). Because they are fixed and versioned, a module you design in a year fits the Core you print today.
 
-## Attaching a module to a Core
+## Connecting a module to a Core
 
-Once a module exists in your library, mount it on a socket of your Core:
+1. Have both builds in your library: the Core, and a module whose plug matches the mounting point (socket or rail, same connector).
+2. Open the **Core**. In the sidebar, under **Modules**, every mounting point is listed with a menu: pick the module. The menu only offers modules that fit.
+3. The module appears mounted in the viewport, its draw is added to the Core's 5 V budget on the **Power** page, and the **Checks** tab confirms it fits.
 
-1. Open the Core and select its **DeckPort** accessory (Outline → Accessories).
-2. Under **Attached module**, pick the module.
+![The Modules panel in the sidebar](./images/modules-panel.png)
+
+The same choice is available in the Inspector when you select the socket or rail (Outline → Accessories). That is also where you set a rail module's **position along the rail** and the **USB-C port** beside the rail.
+
+To edit a module, click the **›** next to it in the sidebar. When the open build is a module, the sidebar shows **how it mounts** and the Cores it is on, with a button to go back.
 
 ![Wayfarer with the SDR module attached to its right socket](./images/module-attached.png)
 
-From then on:
-
-- the module is drawn **mounted on the socket**, plug face against socket face, and follows the lid if the socket is on a hinged lid. Toggle **Modules** in the toolbar to hide it. **Explode** pulls it away from the socket;
-- its draw (the sum of its loads) is a **load on the Core's 5 V rail** in the Power page, so the Core's converter and battery life account for it;
-- the Checks list warns when the module peaks above the socket's **15 W**, or implements a different **major DeckPort version** than the Core;
-- the Core's DeckID lists its modules.
+Toggle **Modules** in the toolbar to hide mounted modules. **Explode** pulls them away from their mounting point. The module's pieces are not part of the Core's Print page or Shopping list: print and buy them from the module's own build.
 
 ![The module pulled away from its socket in the exploded view](./images/module-exploded.png)
 
-The module stays its own build: **Open the module to edit it** switches to it, and the Core picks up the change. The module's pieces are not part of the Core's Print page or Shopping list; print and buy them from the module's own build.
+## Designing a module
 
-## Workflow: build the Core now, modules later
+1. **Library → Start from a format**:
+   - **DeckPort module (2U × 2U)** for a socket module: plug on its back, pogo by default.
+   - **Rail module (Picatinny)** for a rail module: clamp on its bottom, USB-C port on its end.
+2. Select its **DeckPort** accessory to choose **Mounts**: *On a socket* or *On a Picatinny rail*. For a socket module, also choose the **Connector**: *8-pin pogo* or *USB-C*.
+3. Place its electronics. Its 5 V loads are powered by the Core through VBUS, so it needs no converter; USB and I²C devices take their port from the plug.
+4. The Checks list warns when the module draws more than 15 W, has no plug, or when a rail clamp is too big for its face.
 
-Print and assemble your Core with one or two sockets. Months later, design a module against DeckPort 1.0: it fits without touching the Core. Keep each module as its own build in the library, and link it to its Core in the DeckID.
+## Making a Core ready for modules
+
+- **Sockets**: Outline → Accessories → **+ → DeckPort**, on any face. Choose pogo or USB-C in its Inspector.
+- **Rails**: Outline → Accessories → **+ → Picatinny rail** (see [Accessories](./accessories.md)), then in its Inspector set **USB-C port beside the rail**: *Above* or *Below* it, or *Past the left / right end* when the face is too short for a port beside the rail.
+
+Each one with a module takes one of the Core's USB ports (add a hub if the port check complains), gets a VBUS feed on the Wiring page, and adds its connector to the Shopping list.
+
+## Going USB-C everywhere
+
+To use only USB-C between Core and modules:
+
+- give every **socket** on the Core the **USB-C** connector, and every **socket module** a **USB-C** plug;
+- or use **rails** with a **port**: rail modules always connect with a USB-C cable.
+
+What USB-C gives you: off-the-shelf connectors and cables, a reversible plug, the same 15 W and USB 2.0 data. What it drops compared with the pogo block: the **I²C bus** (unless you wire SBU1/SBU2 with full-featured cables), the **ID pin** (modules identify themselves over USB instead) and **VBAT**. Fit receptacles with the CC resistors: 10 kΩ pull-up on the Core side, 5.1 kΩ pull-down on the module side.
+
+## The examples
+
+| Core | Module | Mounting |
+|---|---|---|
+| Wayfarer | SDR module | Socket, 8-pin pogo |
+| Courier | GPS module | Socket, USB-C |
+| Vanguard | LoRa module | Picatinny rail, USB-C cable to the port past the rail end |

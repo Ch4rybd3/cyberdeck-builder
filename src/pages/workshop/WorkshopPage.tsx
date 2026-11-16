@@ -91,7 +91,7 @@ export function WorkshopPage() {
           <div className="ml-3 flex items-center gap-3">
             <Toggle label="Components" checked={view.components} onChange={components => setView(v => ({ ...v, components }))} />
             <Toggle label="Accessories" checked={view.accessories} onChange={accessories => setView(v => ({ ...v, accessories }))} />
-            {build.accessories.some(a => a.kind === 'deckport' && a.moduleId) && <Toggle label="Modules" checked={view.modules} onChange={modules => setView(v => ({ ...v, modules }))} />}
+            {build.accessories.some(a => (a.kind === 'deckport' || a.kind === 'picatinny') && a.moduleId) && <Toggle label="Modules" checked={view.modules} onChange={modules => setView(v => ({ ...v, modules }))} />}
           </div>
         </>
       }
