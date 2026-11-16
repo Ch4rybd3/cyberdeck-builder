@@ -50,7 +50,7 @@ function Catalog() {
     const id = uid('pl')
     update(b => {
       // Displays go into the lid by default; everything else into the tray.
-      b.placements.push({ id, componentId, part: c.category === 'display' ? 'lid' : 'tray', x: 0, y: 0, z: 0, rotation: 0, standoffs: true, window: true })
+      b.placements.push({ id, componentId, part: c.category === 'display' ? 'lid' : 'tray', x: 0, y: 0, z: 0, rotation: 0, rotX: 0, rotY: 0, standoffs: true, window: true })
     })
     select({ kind: 'placement', id })
   }

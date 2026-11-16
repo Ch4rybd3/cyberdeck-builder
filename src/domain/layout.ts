@@ -88,26 +88,129 @@ export function rotate2(x: number, y: number, deg: number): [number, number] {
   }
 }
 
-/** Height of the standoff a placement sits on, or 0 without standoffs. */
+// ── 3D orientation (90° steps: X, then Y, then Z) ───────────────────────────
+
+const cosQ = (d: number) => [1, 0, -1, 0][(((d / 90) % 4) + 4) % 4]
+const sinQ = (d: number) => [0, 1, 0, -1][(((d / 90) % 4) + 4) % 4]
+
+type Oriented = Pick<Placement, 'rotation' | 'rotX' | 'rotY'>
+
+/** Rotate a vector from the component's frame into the case frame. */
+export function orient(v: V3, pl: Oriented): V3 {
+  let [x, y, z] = v
+  const ax = pl.rotX ?? 0
+  const ay = pl.rotY ?? 0
+  const az = pl.rotation ?? 0
+  ;[y, z] = [y * cosQ(ax) - z * sinQ(ax), y * sinQ(ax) + z * cosQ(ax)]
+  ;[x, z] = [x * cosQ(ay) + z * sinQ(ay), -x * sinQ(ay) + z * cosQ(ay)]
+  ;[x, y] = [x * cosQ(az) - y * sinQ(az), x * sinQ(az) + y * cosQ(az)]
+  return [x, y, z]
+}
+
+/** True when the component lies flat (only turned about Z). */
+export function isFlat(pl: Oriented): boolean {
+  return (pl.rotX ?? 0) === 0 && (pl.rotY ?? 0) === 0
+}
+
+/** Envelope of the component after its orientation, along the case axes. */
+export function orientedDims(c: CatalogComponent, pl: Oriented): V3 {
+  const out: V3 = [0, 0, 0]
+  const axes: V3[] = [[c.dims.x, 0, 0], [0, c.dims.y, 0], [0, 0, c.dims.z]]
+  for (const a of axes) {
+    const r = orient(a, pl)
+    for (let k = 0; k < 3; k++) out[k] += Math.abs(r[k])
+  }
+  return out
+}
+
+/** Height of the standoff a placement sits on, or 0 without standoffs (only flat boards get them). */
 export function standoffHeight(c: CatalogComponent, pl: Placement): number {
-  return pl.standoffs && c.mounting ? c.mounting.standoff : 0
+  return pl.standoffs && c.mounting && isFlat(pl) ? c.mounting.standoff : 0
 }
 
 /** World-space (assembled) box of a placed component. */
 export function placementBox(build: Build, c: CatalogComponent, pl: Placement): AABB {
   const p = build.case.params
-  const fp = rotatedFootprint(c, pl.rotation)
+  const [dx, dy, dz] = orientedDims(c, pl)
   let z0: number
   if (pl.part === 'tray') {
     z0 = p.floor + Math.max(pl.z, standoffHeight(c, pl))
   } else {
     const ceiling = p.trayHeight + p.lidHeight - p.floor
-    z0 = ceiling - Math.max(pl.z, standoffHeight(c, pl)) - c.dims.z
+    z0 = ceiling - Math.max(pl.z, standoffHeight(c, pl)) - dz
   }
   return {
-    min: [pl.x - fp.x / 2, pl.y - fp.y / 2, z0],
-    max: [pl.x + fp.x / 2, pl.y + fp.y / 2, z0 + c.dims.z],
+    min: [pl.x - dx / 2, pl.y - dy / 2, z0],
+    max: [pl.x + dx / 2, pl.y + dy / 2, z0 + dz],
   }
+}
+
+/** Inverse of placementBox's z: the `z` field that puts the box bottom at `bottom` (assembled coordinates). */
+export function zFieldForBottom(build: Build, c: CatalogComponent, pl: Placement, bottom: number): number {
+  const p = build.case.params
+  if (pl.part === 'tray') return Math.max(0, bottom - p.floor)
+  const ceiling = p.trayHeight + p.lidHeight - p.floor
+  return Math.max(0, ceiling - (bottom + orientedDims(c, pl)[2]))
+}
+
+/** A component window resolved onto a case face, in that face's (u, v) coordinates. */
+export interface PlacedWindow {
+  part: PartId
+  face: Face
+  u: number
+  v: number
+  /** Extent along the face's u and v axes. */
+  w: number
+  h: number
+  r: number
+  /** Gap between the component's face and the inside of the case wall. */
+  gap: number
+}
+
+const WINDOW_AXES: Record<Window['face'], { n: V3; u: V3; v: V3; half: (c: CatalogComponent) => number }> = {
+  top: { n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0], half: c => c.dims.z / 2 },
+  front: { n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1], half: c => c.dims.y / 2 },
+  back: { n: [0, 1, 0], u: [-1, 0, 0], v: [0, 0, 1], half: c => c.dims.y / 2 },
+  right: { n: [1, 0, 0], u: [0, 1, 0], v: [0, 0, 1], half: c => c.dims.x / 2 },
+  left: { n: [-1, 0, 0], u: [0, -1, 0], v: [0, 0, 1], half: c => c.dims.x / 2 },
+}
+
+const dot3 = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+/**
+ * Where each of a component's windows lands on the case, whatever its
+ * orientation: a window facing up is cut through the lid, one facing down
+ * through the tray floor, one facing sideways through that wall.
+ */
+export function placedWindows(build: Build, c: CatalogComponent, pl: Placement): PlacedWindow[] {
+  if (!c.windows) return []
+  const p = build.case.params
+  const box = placementBox(build, c, pl)
+  const centre: V3 = [(box.min[0] + box.max[0]) / 2, (box.min[1] + box.max[1]) / 2, (box.min[2] + box.max[2]) / 2]
+  return c.windows.map(w => {
+    const ax = WINDOW_AXES[w.face]
+    const local: V3 = [0, 1, 2].map(k => ax.n[k] * ax.half(c) + ax.u[k] * (w.u ?? 0) + ax.v[k] * (w.v ?? 0)) as V3
+    const off = orient(local, pl)
+    const n = orient(ax.n, pl)
+    const ru = orient(ax.u, pl)
+    const k = [0, 1, 2].reduce((a, b) => (Math.abs(n[b]) > Math.abs(n[a]) ? b : a), 0)
+    const face: Face = k === 2 ? (n[2] > 0 ? 'top' : 'bottom') : k === 0 ? (n[0] > 0 ? 'right' : 'left') : n[1] > 0 ? 'back' : 'front'
+    const part: PartId = face === 'top' ? 'lid' : face === 'bottom' ? 'tray' : pl.part
+    const f = faceFrame(p, part, face)
+    const world: V3 = [centre[0] + off[0], centre[1] + off[1], centre[2] + off[2] - partOffsetZ(p, part)]
+    const rel: V3 = [world[0] - f.origin[0], world[1] - f.origin[1], world[2] - f.origin[2]]
+    const alongU = Math.abs(dot3(ru, f.u)) > 0.5
+    return {
+      part,
+      face,
+      u: dot3(rel, f.u),
+      v: dot3(rel, f.v),
+      w: alongU ? w.w : w.h,
+      h: alongU ? w.h : w.w,
+      r: w.r ?? (face === 'top' ? 1 : 0.5),
+      gap: Math.max(0, -dot3(rel, f.n) - f.thickness),
+    }
+  })
 }
 
 /** The usable interior of the assembled case. */

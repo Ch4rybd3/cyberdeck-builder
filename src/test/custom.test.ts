@@ -25,7 +25,7 @@ it('uses a custom component in geometry, power and the shopping list', async () 
     mounting: { insert: 'M2.5', holes: [[-25, -15], [25, -15], [-25, 15], [25, 15]], standoff: 5 },
     power: { role: 'load', rail: '5V', typW: 3, peakW: 6 },
   })
-  b.placements.push({ id: 'p1', componentId: 'custom-sbc', part: 'tray', x: 0, y: 0, z: 0, rotation: 0, standoffs: true, window: true })
+  b.placements.push({ id: 'p1', componentId: 'custom-sbc', part: 'tray', x: 0, y: 0, z: 0, rotation: 0, rotX: 0, rotY: 0, standoffs: true, window: true })
   const r = generateCase(wasm, b)
   expect(r.fasteners.filter(f => f.purpose === 'standoff')).toHaveLength(4)
   expect(analysePower(b).loads.map(l => l.component.name)).toEqual(['My SBC'])

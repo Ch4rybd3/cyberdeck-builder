@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -101,6 +101,8 @@ export const Accessory = z.object({
 export type Accessory = z.infer<typeof Accessory>
 
 // ── Component placements ─────────────────────────────────────────────────────
+const Quarter = z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)])
+export type Quarter = z.infer<typeof Quarter>
 export const Placement = z.object({
   id: z.string(),
   componentId: z.string(),
@@ -110,7 +112,11 @@ export const Placement = z.object({
   y: z.number().default(0),
   /** Height above the part's inner floor (tray) or below its inner ceiling (lid). */
   z: z.number().default(0),
-  rotation: z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)]).default(0),
+  /** Turn about Z (vertical), in 90° steps. Applied last. */
+  rotation: Quarter.default(0),
+  /** Tilt about X, then Y, in 90° steps — e.g. a board standing on its edge. Applied before `rotation`. */
+  rotX: Quarter.default(0),
+  rotY: Quarter.default(0),
   /** Generate standoffs with heat-set inserts under the component's mounting holes. */
   standoffs: z.boolean().default(true),
   /** Cut the component's window (screen, keyboard, port) through the nearest face. */

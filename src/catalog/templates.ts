@@ -135,10 +135,12 @@ const pl = (componentId: string, x: number, y: number, extra: Partial<Placement>
   y,
   z: 0,
   rotation: 0,
+  rotX: 0,
+  rotY: 0,
   standoffs: true,
   window: true,
   ...extra,
-})
+} as Placement)
 
 const feat = (f: Omit<Feature, 'id' | 'enabled' | 'rotation'> & Partial<Feature>): Feature => ({
   id: uid('ft'),

@@ -48,7 +48,7 @@ describe('formats', () => {
     delete c.params.cornerStyle
     delete c.params.hinge
     const { build } = migrate(old)
-    expect(build?.schemaVersion).toBe(3)
+    expect(build?.schemaVersion).toBe(4)
     expect(build?.case.params.hinge).toBe(false)
   })
 })

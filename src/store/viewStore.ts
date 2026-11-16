@@ -18,6 +18,8 @@ export interface ViewOptions {
   cameraRev: number
   /** Placement under the pointer, for the name tooltip. */
   hovered: string | null
+  /** Workshop tool: select only, move along X/Y/Z, or rotate about X/Y/Z. */
+  tool: 'select' | 'move' | 'rotate'
 }
 
 interface ViewState extends ViewOptions {
@@ -34,5 +36,6 @@ export const useView = create<ViewState>(set => ({
   camera: 'iso',
   cameraRev: 0,
   hovered: null,
+  tool: 'select',
   set: patch => set(patch),
 }))

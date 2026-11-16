@@ -5,7 +5,7 @@
  * envelope boxes in their category colour and can be dragged across the XY
  * plane; the drag commits through the build store so it is undoable.
  */
-import { Edges, GizmoHelper, GizmoViewport, Grid, OrbitControls } from '@react-three/drei'
+import { Edges, GizmoHelper, GizmoViewport, Grid, OrbitControls, TransformControls } from '@react-three/drei'
 import { Canvas, type ThreeEvent } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
@@ -13,8 +13,8 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 
 import { componentById } from '../../catalog/components'
 import { CATEGORY_DATA_SLOT } from '../../catalog/types'
-import { boxSize, placementBox } from '../../domain/layout'
-import type { Build } from '../../domain/schema'
+import { placementBox, zFieldForBottom } from '../../domain/layout'
+import type { Build, Quarter } from '../../domain/schema'
 import type { CarriedDisplay, GeneratedPiece } from '../../geometry/caseBuilder'
 import { useBuild } from '../../store/buildStore'
 import { useGeometry } from '../../store/geometryStore'
@@ -86,7 +86,11 @@ export function Viewport({ collisions }: { collisions: Set<string> }) {
       camera={{ position: presets[view.camera], fov: 40, near: 1, far: 10000 }}
       dpr={[1, 2]}
       gl={{ antialias: true }}
-      onPointerMissed={() => useBuild.getState().select({ kind: 'case' })}
+      onPointerMissed={() => {
+        // A press on a gizmo handle hits no scene object; it must not deselect (and unmount) the gizmo.
+        if (gizmoBusy()) return
+        useBuild.getState().select({ kind: 'case' })
+      }}
       style={{ background: `#${colors.canvas.getHexString()}` }}
     >
       <hemisphereLight args={[colors.white, colors.canvas, 0.9]} />
@@ -180,6 +184,7 @@ function CarriedBox({ id, info, view, hinge, colors }: { id: string; info: Carri
         position={pos}
         onPointerDown={e => {
           e.stopPropagation()
+          if (gizmoBusy()) return
           useBuild.getState().select({ kind: 'placement', id })
         }}
       >
@@ -191,25 +196,54 @@ function CarriedBox({ id, info, view, hinge, colors }: { id: string; info: Carri
   )
 }
 
+const DEG = Math.PI / 180
+
+/** The transform gizmo, once it has reported in through its first 'change'. */
+let activeGizmo: { dragging: boolean; axis: string | null } | null = null
+const draggingGizmo = () => Boolean(activeGizmo?.dragging)
+/** True while the pointer is on a gizmo handle or dragging one. */
+const gizmoBusy = () => Boolean(activeGizmo && (activeGizmo.dragging || activeGizmo.axis))
+
+/** Nearest multiple of 90°, normalised to 0–270. */
+function quarter(rad: number): Quarter {
+  const q = ((Math.round(rad / DEG / 90) % 4) + 4) % 4
+  return (q * 90) as Quarter
+}
+
 function ComponentBox({ id, collision, colors, controls, draggable }: { id: string; collision: boolean; colors: ReturnType<typeof useTokenColors>; controls: React.RefObject<OrbitControlsImpl>; draggable: boolean }) {
   const build = useBuild(s => s.build)
   const selected = useBuild(s => s.selection?.kind === 'placement' && s.selection.id === id)
+  const tool = useView(s => s.tool)
   const pl = build.placements.find(x => x.id === id)
   const c = pl && componentById(pl.componentId)
   const drag = useRef<{ plane: THREE.Plane; offset: THREE.Vector3 } | null>(null)
   const [hover, setHover] = useState(false)
+  const [mesh, setMesh] = useState<THREE.Mesh | null>(null)
+  const gizmo = useRef<{ axis: string | null; dragging: boolean } | null>(null)
   if (!pl || !c) return null
 
   const box = placementBox(build, c, pl)
-  const [sx, sy, sz] = boxSize(box)
   const centre: [number, number, number] = [(box.min[0] + box.max[0]) / 2, (box.min[1] + box.max[1]) / 2, (box.min[2] + box.max[2]) / 2]
+  // The mesh keeps the catalog dimensions and carries the orientation, so the
+  // rotate gizmo turns the real box; with 90° steps it fills the same envelope.
+  const rotation: [number, number, number, 'ZYX'] = [pl.rotX * DEG, pl.rotY * DEG, pl.rotation * DEG, 'ZYX']
   const base = colors.data[CATEGORY_DATA_SLOT[c.category] - 1]
   const edge = collision ? colors.critical : selected ? colors.accent : base
+  const canDrag = draggable && tool === 'move'
 
+  const commit = (fn: (t: NonNullable<typeof pl>) => void, key: string) =>
+    useBuild.getState().update(b => {
+      const t = b.placements.find(q => q.id === id)
+      if (t) fn(t)
+    }, { coalesce: key })
+
+  // Free drag of the box body on its horizontal plane (Move tool).
   const onDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
+    // A press on a gizmo handle belongs to the gizmo, even when another box sits behind it.
+    if (gizmoBusy()) return
     useBuild.getState().select({ kind: 'placement', id })
-    if (!draggable) return
+    if (!canDrag || !selected) return
     const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -centre[2])
     const hit = new THREE.Vector3()
     e.ray.intersectPlane(plane, hit)
@@ -226,16 +260,10 @@ function ComponentBox({ id, collision, colors, controls, draggable }: { id: stri
     const x = Math.round((hit.x + drag.current.offset.x) / snap) * snap
     const y = Math.round((hit.y + drag.current.offset.y) / snap) * snap
     if (x === pl.x && y === pl.y) return
-    useBuild.getState().update(
-      b => {
-        const t = b.placements.find(q => q.id === id)
-        if (t) {
-          t.x = x
-          t.y = y
-        }
-      },
-      { coalesce: `drag.${id}` },
-    )
+    commit(t => {
+      t.x = x
+      t.y = y
+    }, `drag.${id}`)
   }
   const onUp = (e: ThreeEvent<PointerEvent>) => {
     drag.current = null
@@ -243,25 +271,74 @@ function ComponentBox({ id, collision, colors, controls, draggable }: { id: stri
     if (controls.current) controls.current.enabled = true
   }
 
+  // Gizmo: arrows along X, Y and Z for Move; rings about X, Y and Z for Rotate.
+  // The gizmo moves the mesh itself while dragging; the build is written once,
+  // on release, so the drag is one undo step and is never interrupted by a re-render.
+  const onGizmoEnd = () => {
+    if (!mesh) return
+    if (tool === 'move') {
+      const x = Math.round(mesh.position.x)
+      const y = Math.round(mesh.position.y)
+      // Only touch z when the box was actually moved vertically.
+      const movedZ = Math.abs(mesh.position.z - centre[2]) > 0.25
+      const z = movedZ ? Math.round(zFieldForBottom(build, c, pl, mesh.position.z - (box.max[2] - box.min[2]) / 2)) : pl.z
+      if (x === pl.x && y === pl.y && z === pl.z) return
+      commit(t => {
+        t.x = x
+        t.y = y
+        t.z = z
+      }, `move.${id}.${Date.now()}`)
+    } else if (tool === 'rotate') {
+      const e = new THREE.Euler().setFromQuaternion(mesh.quaternion, 'ZYX')
+      const next = { rotX: quarter(e.x), rotY: quarter(e.y), rotation: quarter(e.z) }
+      if (next.rotX === pl.rotX && next.rotY === pl.rotY && next.rotation === pl.rotation) return
+      commit(t => Object.assign(t, next), `rotate.${id}.${Date.now()}`)
+    }
+  }
+
   return (
-    <mesh
-      position={centre}
-      onPointerDown={onDown}
-      onPointerMove={onMove}
-      onPointerUp={onUp}
-      onPointerOver={e => {
-        e.stopPropagation()
-        setHover(true)
-        useView.getState().set({ hovered: id })
-      }}
-      onPointerOut={() => {
-        setHover(false)
-        if (useView.getState().hovered === id) useView.getState().set({ hovered: null })
-      }}
-    >
-      <boxGeometry args={[sx, sy, sz]} />
-      <meshStandardMaterial color={base} transparent opacity={selected ? 0.6 : hover ? 0.5 : 0.38} depthWrite={false} />
-      <Edges color={edge} lineWidth={selected || collision ? 2 : 1} />
-    </mesh>
+    <>
+      <mesh
+        ref={setMesh}
+        position={centre}
+        rotation={rotation}
+        onPointerDown={onDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerOver={e => {
+          e.stopPropagation()
+          // No re-render while a gizmo drag is running: it would reset the mesh under the gizmo.
+          if (draggingGizmo()) return
+          setHover(true)
+          useView.getState().set({ hovered: id })
+        }}
+        onPointerOut={() => {
+          if (draggingGizmo()) return
+          setHover(false)
+          if (useView.getState().hovered === id) useView.getState().set({ hovered: null })
+        }}
+      >
+        <boxGeometry args={[c.dims.x, c.dims.y, c.dims.z]} />
+        <meshStandardMaterial color={base} transparent opacity={selected ? 0.6 : hover ? 0.5 : 0.38} depthWrite={false} />
+        <Edges color={edge} lineWidth={selected || collision ? 2 : 1} />
+      </mesh>
+      {selected && draggable && mesh && tool !== 'select' && (
+        <TransformControls
+          object={mesh}
+          // The instance arrives with its first 'change' (the hovered axis); keep it to tell gizmo presses from box presses.
+          onChange={(e?: { target?: unknown }) => {
+            if (e?.target) {
+              gizmo.current = e.target as { axis: string | null; dragging: boolean }
+              activeGizmo = gizmo.current
+            }
+          }}
+          mode={tool === 'move' ? 'translate' : 'rotate'}
+          translationSnap={1}
+          rotationSnap={Math.PI / 2}
+          size={0.9}
+          onMouseUp={onGizmoEnd}
+        />
+      )}
+    </>
   )
 }

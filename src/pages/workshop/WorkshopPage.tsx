@@ -5,7 +5,7 @@ import { carriedPlacementIds } from '../../geometry/caseBuilder'
 import { intersects, placementBox } from '../../domain/layout'
 import { useBuild } from '../../store/buildStore'
 import { useGeometry } from '../../store/geometryStore'
-import { Box, Layers, Redo2, Undo2 } from '../../ui/icons'
+import { Box, Layers, MousePointer2, Move3d, Redo2, Rotate3d, Undo2 } from '../../ui/icons'
 import { Aside, PageShell, Segmented, Toggle } from '../../ui/primitives'
 import { ChecksPanel, useChecks } from './ChecksPanel'
 import { Inspector } from './Inspector'
@@ -61,7 +61,17 @@ export function WorkshopPage() {
       }
       toolbar={
         <>
-          <span className="label mb-0">Lid</span>
+          <span className="label mb-0">Tool</span>
+          <Segmented
+            value={view.tool}
+            onChange={tool => view.set({ tool })}
+            options={[
+              { value: 'select', label: <span className="flex items-center gap-1"><MousePointer2 size={12} />Select</span>, title: 'Select (V): click to select, nothing moves' },
+              { value: 'move', label: <span className="flex items-center gap-1"><Move3d size={12} />Move</span>, title: 'Move (M): drag the arrows along X, Y or Z, or drag the box on its plane' },
+              { value: 'rotate', label: <span className="flex items-center gap-1"><Rotate3d size={12} />Rotate</span>, title: 'Rotate (R): drag a ring to turn about X, Y or Z in 90° steps' },
+            ]}
+          />
+          <span className="label mb-0 ml-3">Lid</span>
           <Segmented value={view.lid} onChange={lid => setView(v => ({ ...v, lid }))} options={[{ value: 'solid', label: 'Solid' }, { value: 'ghost', label: 'Ghost' }, { value: 'hidden', label: 'Hidden' }]} />
           <span className="label mb-0 ml-3">Explode</span>
           <input type="range" min={0} max={1} step={0.01} value={view.explode} onChange={e => setView(v => ({ ...v, explode: Number(e.target.value) }))} className="w-32 accent-[rgb(var(--accent))]" />
@@ -127,6 +137,14 @@ function useWorkshopKeys() {
         e.preventDefault()
         s.redo()
         return
+      }
+      if (!mod) {
+        const tools: Record<string, 'select' | 'move' | 'rotate'> = { v: 'select', m: 'move', r: 'rotate', escape: 'select' }
+        const tool = tools[e.key.toLowerCase()]
+        if (tool) {
+          useView.getState().set({ tool })
+          return
+        }
       }
       const sel = s.selection
       if (!sel?.id) return

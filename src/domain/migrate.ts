@@ -27,6 +27,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 3
     v = 3
   }
+  // 3 → 4: placements gain rotX / rotY (default 0).
+  if (v === 3) {
+    obj.schemaVersion = 4
+    v = 4
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

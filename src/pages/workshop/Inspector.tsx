@@ -13,7 +13,7 @@ import { TEMPLATES } from '../../catalog/templates'
 import { SOCKET } from '../../domain/deckport'
 import { sliderGeometry } from '../../geometry/caseBuilder'
 import { faceSize } from '../../domain/layout'
-import { FACES, type Accessory, type Build, type Feature, type Shape } from '../../domain/schema'
+import { FACES, type Accessory, type Build, type Feature, type Quarter, type Shape } from '../../domain/schema'
 import { uid } from '../../lib/id'
 import { useBuild } from '../../store/buildStore'
 import { Copy, RotateCw, Trash2 } from '../../ui/icons'
@@ -200,16 +200,26 @@ function PlacementInspector({ id }: { id: string }) {
             <NumberField label="X" unit="mm" value={pl.x} onChange={v => set(t => void (t.x = v), 'x')} />
             <NumberField label="Y" unit="mm" value={pl.y} onChange={v => set(t => void (t.y = v), 'y')} />
             <NumberField label={pl.part === 'tray' ? 'Lift above floor' : 'Drop below top'} unit="mm" value={pl.z} min={0} onChange={v => set(t => void (t.z = v), 'z')} />
-            <Field2 label="Rotation">
-              <div className="flex items-center gap-1">
-                <span className="font-mono text-ui text-fg w-10">{pl.rotation}°</span>
-                <button className="btn-secondary" onClick={() => set(t => void (t.rotation = (((t.rotation + 90) % 360) as 0 | 90 | 180 | 270)), 'rot')}>
-                  <RotateCw size={13} />
-                </button>
-              </div>
-            </Field2>
           </Grid2>
-          <p className="text-label text-fg-muted">Drag in the viewport (Shift snaps to 5 mm) or nudge with the arrow keys.</p>
+          <Field2 label="Rotation (90° steps)">
+            <div className="grid grid-cols-3 gap-1">
+              {([['rotX', 'X', 'Tilt about X: stands the part on its front or back edge'], ['rotY', 'Y', 'Tilt about Y: stands the part on its left or right edge'], ['rotation', 'Z', 'Turn about the vertical axis']] as const).map(([key, axis, title]) => (
+                <button
+                  key={key}
+                  className="btn-secondary flex items-center justify-between gap-1"
+                  title={title}
+                  onClick={() => set(t => void (t[key] = (((t[key] + 90) % 360) as Quarter)), `rot${axis}`)}
+                >
+                  <span className="font-mono text-label text-fg-muted">{axis}</span>
+                  <span className="font-mono text-ui text-fg">{pl[key]}°</span>
+                  <RotateCw size={12} />
+                </button>
+              ))}
+            </div>
+          </Field2>
+          <p className="text-label text-fg-muted">
+            Use the Move (M) and Rotate (R) tools in the toolbar to drag along or about each axis, or nudge with the arrow keys. A tilted board gets no standoffs.
+          </p>
         </div>
       </Section>
       <Section title="Mounting" numeral="03">

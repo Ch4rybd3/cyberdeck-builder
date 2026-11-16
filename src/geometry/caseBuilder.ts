@@ -27,10 +27,11 @@ import {
   frameMatrix,
   partOffsetZ,
   placementBox,
+  isFlat,
+  placedWindows,
   rotate2,
   rotatedFootprint,
   standoffHeight,
-  windowCaseFace,
   type AABB,
   type Frame,
   type V3,
@@ -337,10 +338,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     if (!c || carriedIds.has(pl.id)) continue
     const part = pl.part
     const hS = standoffHeight(c, pl)
-    const lift = Math.max(pl.z, hS)
 
-    // Standoffs
-    if (pl.standoffs && c.mounting) {
+    // Standoffs (flat boards only)
+    if (pl.standoffs && c.mounting && isFlat(pl)) {
       const spec = INSERTS[c.mounting.insert]
       for (const [hx, hy] of c.mounting.holes) {
         const [rx, ry] = rotate2(hx, hy, pl.rotation)
@@ -369,38 +369,17 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       }
     }
 
-    // Windows
+    // Windows: resolved onto the case face the component's window points at.
     if (pl.window && c.windows) {
-      const fp = rotatedFootprint(c, pl.rotation)
-      for (const w of c.windows) {
-        const face = windowCaseFace(w, pl.rotation)
-        if (face === 'top') {
-          const swap = pl.rotation % 180 !== 0
-          const [du, dv] = rotate2(w.u ?? 0, w.v ?? 0, pl.rotation)
-          const cs = rrect(swap ? w.h : w.w, swap ? w.w : w.h, w.r ?? 1)
-          const m = extrudeZ(cs, H.lid - p.floor - 1, H.lid + 1)
-          bodies.lid.cut.push(s.keep(m.translate([pl.x + du, pl.y + dv, 0])))
-        } else {
-          const f = faceFrame(p, part, face)
-          // Component centre in part-local coordinates.
-          const zLocal =
-            part === 'tray'
-              ? p.floor + lift + c.dims.z / 2
-              : H.lid - p.floor - lift - c.dims.z / 2
-          const centre: V3 = [pl.x, pl.y, zLocal]
-          const rel: V3 = [centre[0] - f.origin[0], centre[1] - f.origin[1], centre[2] - f.origin[2]]
-          const u = dot(rel, f.u) + (w.u ?? 0)
-          const v = dot(rel, f.v) + (w.v ?? 0)
-          const cut = extrudeZ(rrect(w.w, w.h, w.r ?? 0.5), -f.thickness - 2, 1)
-          bodies[part].cut.push(inFrame(cut, f, u, v))
-          // The component must reach the wall for the window to be useful.
-          const reach = face === 'front' || face === 'back' ? p.depth / 2 - p.wall - fp.y / 2 : p.width / 2 - p.wall - fp.x / 2
-          const offset = face === 'front' ? pl.y + reach : face === 'back' ? reach - pl.y : face === 'right' ? reach - pl.x : pl.x + reach
-          if (offset > 3)
-            issues.push({ severity: 'low', message: `${pl.label ?? c.name}: ${face} window is ${offset.toFixed(0)} mm away from the wall. Move the component against it.` })
-        }
+      for (const w of placedWindows(build, c, pl)) {
+        const f = faceFrame(p, w.part, w.face)
+        bodies[w.part].cut.push(inFrame(extrudeZ(rrect(w.w, w.h, w.r), -f.thickness - 2, 1), f, w.u, w.v))
+        if (w.face !== 'top' && w.gap > 3)
+          issues.push({ severity: 'low', message: `${pl.label ?? c.name}: ${w.face} window is ${w.gap.toFixed(0)} mm away from the wall. Move the component against it.` })
       }
     }
+    if (pl.standoffs && c.mounting && !isFlat(pl))
+      issues.push({ severity: 'info', message: `${pl.label ?? c.name} is tilted, so it gets no standoffs. Mount it with a bracket or a boss feature.` })
   }
 
   // ── 4. user features ──
@@ -901,10 +880,6 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
 
 function aabbOverlap(a: AABB, b: AABB): boolean {
   return a.min[0] < b.max[0] && a.max[0] > b.min[0] && a.min[1] < b.max[1] && a.max[1] > b.min[1] && a.min[2] < b.max[2] && a.max[2] > b.min[2]
-}
-
-function dot(a: V3, b: V3): number {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 }
 
 function cap(s: string): string {

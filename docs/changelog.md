@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 (2026-11-16)
+
+- **Workshop tools**: **Select** (V), **Move** (M) with arrows along X, Y and Z, and **Rotate** (R) with rings about X, Y and Z in 90° steps. Each drag is one undo step.
+- **3D orientation**: components can be tilted about X and Y as well as turned about Z, e.g. a board standing on its edge. Envelopes, collisions and fit follow, and windows are cut in whichever face they end up pointing at, including the tray floor. Tilted boards get no standoffs.
+- Inspector: one 90° step button per axis.
+- Build schema 4 (older builds migrate automatically).
+
 ## 0.3.0 (2026-11-16)
 
 - **Custom components**: describe your own parts (envelope, mounting holes, windows, power role, ports), or make an editable copy of any catalog part. They are stored in the build, so share links and files carry them.

@@ -126,6 +126,18 @@ await shot('slider')
 await view({ explode: 0.8, slide: 0 })
 await shot('slider-exploded', 'viewport')
 
+// ── Move and rotate tools ──
+await open('', 'example-wayfarer')
+await page.evaluate(() => {
+  const s = window.__cdb.build.getState()
+  s.select({ kind: 'placement', id: s.build.placements.find(p => p.label === 'Pi 5').id })
+})
+await view({ lid: 'hidden', tool: 'move' })
+await shot('tool-move', 'viewport')
+await view({ tool: 'rotate' })
+await shot('tool-rotate', 'viewport')
+await view({ tool: 'select', lid: 'ghost' })
+
 // ── Custom component editor ──
 await open('', 'example-wayfarer')
 await page.evaluate(() => document.querySelector('button[title="New custom component"]')?.click())

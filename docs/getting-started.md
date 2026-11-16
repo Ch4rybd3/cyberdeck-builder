@@ -14,7 +14,8 @@ The library also ships five examples: **Wayfarer** (Pi 5 slab), **Vanguard** (ta
 
 In the **Workshop**, the *Components* tab lists the catalog. Click a component to add it: displays go into the lid, everything else into the tray. Then:
 
-- drag it in the viewport (hold **Shift** to snap to 5 mm),
+- pick the **Move** tool (M) and drag its arrows along X, Y or Z, or drag the box on its plane (hold **Shift** to snap to 5 mm),
+- pick the **Rotate** tool (R) and drag a ring to turn it in 90° steps,
 - or nudge it with the **arrow keys** (Shift for 10 mm),
 - or type exact values in the **Inspector**.
 
@@ -50,4 +51,5 @@ The **DeckID** page is the deck's identity card: codename, author, licence, desc
 |---|---|
 | Ctrl + Z / Ctrl + Shift + Z | Undo / redo |
 | Arrow keys (+ Shift) | Nudge the selected component by 1 mm (10 mm) |
+| V / M / R | Select, Move or Rotate tool |
 | Delete | Remove the selected component, feature or accessory |
