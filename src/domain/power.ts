@@ -8,8 +8,8 @@
  * its input to the 5 V budget.
  */
 import { componentById, syncCustomComponents } from '../catalog/components'
+import { DECKPORT_VERSION, SOCKET_MAX_W } from './deckport'
 import type { CatalogComponent, Rail } from '../catalog/types'
-import { SOCKET_MAX_W } from './deckport'
 import type { Build, Placement } from './schema'
 
 export const RAIL_ORDER: Rail[] = ['3V3', '5V', '12V', 'VBAT']
@@ -79,7 +79,20 @@ export function resolveItems(build: Build): PowerItem[] {
     .filter((i): i is PowerItem => Boolean(i.component))
 }
 
-export function analysePower(build: Build): PowerReport {
+/** Total load a module puts on DeckPort VBUS, from its own budget. */
+export function moduleDraw(module: Build): { typW: number; peakW: number } {
+  const r = analysePower(module)
+  return { typW: r.loads.reduce((a, l) => a + l.typW, 0), peakW: r.loads.reduce((a, l) => a + l.peakW, 0) }
+}
+
+export function analysePower(build: Build, modules: Build[] = []): PowerReport {
+  // Modules first: each one syncs its own custom components, so the Core is resolved after.
+  const attached = build.kind === 'core'
+    ? build.accessories.flatMap(acc => {
+        const m = acc.kind === 'deckport' && acc.moduleId ? modules.find(x => x.id === acc.moduleId) : undefined
+        return m ? [{ acc, module: m, draw: moduleDraw(m) }] : []
+      })
+    : []
   const items = resolveItems(build)
   const issues: PowerIssue[] = []
   const loads: LoadLine[] = []
@@ -100,6 +113,17 @@ export function analysePower(build: Build): PowerReport {
         ...it, in: pw.in, out: pw.out, maxW: pw.maxW, efficiency: pw.efficiency, chargeW: pw.chargeW,
         outTypW: 0, outPeakW: 0, inTypW: pw.quiescentW ?? 0, inPeakW: pw.quiescentW ?? 0,
       })
+  }
+
+  // An attached module is a load on the Core's 5 V rail, through its socket's VBUS.
+  for (const { acc, module, draw } of attached) {
+    const placement = { id: `module:${acc.id}`, componentId: module.id, label: `Module: ${module.name}`, part: acc.part, x: 0, y: 0, z: 0, rotation: 0, rotX: 0, rotY: 0, standoffs: false, window: false } as Placement
+    const component: CatalogComponent = { id: module.id, name: module.name, category: 'connector', dims: { x: 1, y: 1, z: 1 }, mass: 0, price: 0, supplier: '' }
+    loads.push({ placement, component, rail: '5V', typW: draw.typW, peakW: draw.peakW })
+    if (draw.peakW > SOCKET_MAX_W)
+      issues.push({ severity: 'high', message: `Module ${module.name} peaks at ${fmt(draw.peakW)} W; a DeckPort socket supplies ${SOCKET_MAX_W} W.` })
+    if (module.deckport.split('.')[0] !== DECKPORT_VERSION.split('.')[0])
+      issues.push({ severity: 'high', message: `Module ${module.name} implements DeckPort ${module.deckport}; this Core implements ${DECKPORT_VERSION}.` })
   }
 
   const railTyp: Record<Rail, number> = { '3V3': 0, '5V': 0, '12V': 0, VBAT: 0 }

@@ -64,6 +64,7 @@ function useTokenColors() {
 
 export function Viewport({ collisions }: { collisions: Set<string> }) {
   const result = useGeometry(s => s.result)
+  const attached = useGeometry(s => s.attached)
   const build = useBuild(s => s.build)
   const view = useView()
   const hinge = useMemo(() => hingeMatrix(build, view.lidOpen), [build, view.lidOpen])
@@ -109,6 +110,7 @@ export function Viewport({ collisions }: { collisions: Set<string> }) {
         infiniteGrid
       />
       {result?.pieces.map(piece => <Piece key={piece.id} piece={piece} view={view} hinge={hinge} />)}
+      {view.modules && attached.flatMap(a => a.pieces.map(piece => <Piece key={piece.id} piece={piece} view={view} hinge={hinge} />))}
       {view.components &&
         build.placements.map(pl =>
           carried.has(pl.id) ? (

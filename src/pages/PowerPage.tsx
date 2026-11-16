@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { CATEGORY_DATA_SLOT } from '../catalog/types'
 import { analysePower, fmt, USABLE_FRACTION } from '../domain/power'
 import { useBuild } from '../store/buildStore'
+import { useAttachedModules } from '../store/geometryStore'
 import { Zap } from '../ui/icons'
 import { Callout, DataDot, EmptyState, Panel, PanelHeader, PageShell, SeverityBadge, StatTile } from '../ui/primitives'
 
@@ -14,7 +15,8 @@ function hours(h: number | null): string {
 
 export function PowerPage() {
   const build = useBuild(s => s.build)
-  const r = useMemo(() => analysePower(build), [build])
+  const modules = useAttachedModules()
+  const r = useMemo(() => analysePower(build, modules), [build, modules])
   const empty = !r.loads.length && !r.converters.length && !r.battery.count
 
   return (

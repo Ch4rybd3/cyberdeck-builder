@@ -27,7 +27,7 @@ export interface Issue {
 
 export const SEVERITY_ORDER: Severity[] = ['critical', 'high', 'medium', 'low', 'info']
 
-export function checkBuild(build: Build, geo?: GeometryResult | null): Issue[] {
+export function checkBuild(build: Build, geo?: GeometryResult | null, modules: Build[] = []): Issue[] {
   syncCustomComponents(build)
   const issues: Issue[] = []
   const push = (category: CheckCategory, severity: Severity, message: string, placementId?: string) =>
@@ -66,7 +66,8 @@ export function checkBuild(build: Build, geo?: GeometryResult | null): Issue[] {
   }
 
   // ── power & ports ──
-  const power = analysePower(build)
+  const power = analysePower(build, modules)
+  syncCustomComponents(build)
   power.issues.forEach(i => push('power', i.severity, i.message, i.placementId))
   analysePorts(build).issues.forEach(i => push('ports', i.severity, i.message))
 
@@ -115,7 +116,9 @@ export function checkBuild(build: Build, geo?: GeometryResult | null): Issue[] {
     if (power.battery.count === 0 && power.converters.length === 0 && peak > 0)
       push('module', 'info', `Powered from the Core through DeckPort VBUS (${fmt(peak)} W peak).`)
   } else if (sockets.length) {
-    push('module', 'info', `${sockets.length} DeckPort socket${sockets.length > 1 ? 's' : ''} ready for modules.`)
+    const used = sockets.filter(s => s.moduleId && modules.some(m => m.id === s.moduleId)).length
+    push('module', 'info', `${sockets.length} DeckPort socket${sockets.length > 1 ? 's' : ''}${used ? `, ${used} with a module attached` : ' ready for modules'}.`)
+    for (const s of sockets) if (s.moduleId && !modules.some(m => m.id === s.moduleId)) push('module', 'low', 'A DeckPort socket points at a module that is not in this library.')
   }
 
   issues.sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity))

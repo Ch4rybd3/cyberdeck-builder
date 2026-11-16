@@ -15,7 +15,7 @@
  */
 import { z } from 'zod'
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 export const FACES = ['top', 'bottom', 'front', 'back', 'left', 'right'] as const
 export const Face = z.enum(FACES)
@@ -34,6 +34,8 @@ export const Shape = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('circle'), d: z.number().positive() }),
   z.object({ kind: z.literal('slot'), w: z.number().positive(), h: z.number().positive() }),
   z.object({ kind: z.literal('polygon'), points: z.array(z.tuple([z.number(), z.number()])).min(3) }),
+  /** Text label. `size` is the cap height in mm. */
+  z.object({ kind: z.literal('text'), text: z.string().min(1).max(64), size: z.number().positive(), font: z.enum(['mono', 'sans']).default('mono') }),
 ])
 export type Shape = z.infer<typeof Shape>
 
@@ -97,6 +99,8 @@ export const Accessory = z.object({
   travel: z.number().min(0).optional(),
   /** Slider: the display placement the carriage holds. */
   targetId: z.string().optional(),
+  /** DeckPort socket on a Core: the module build (from the library) shown attached to it. */
+  moduleId: z.string().optional(),
 })
 export type Accessory = z.infer<typeof Accessory>
 

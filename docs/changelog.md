@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 (2026-11-16)
+
+- **Modules on the Core**: a DeckPort socket can hold a module from the library. The module is drawn mounted on the socket (and follows a hinged lid), its draw is a load on the Core's 5 V rail, and the checks cover the 15 W socket limit and DeckPort version compatibility. The DeckID lists attached modules. The Wayfarer example now carries the SDR module.
+- **Text labels**: a *Text* sketch for any feature, so letters can be inlaid in a second colour, engraved or embossed, in the Remora fonts. The Wayfarer and Vanguard examples have codename labels.
+- Build schema 5 (older builds migrate automatically).
+
 ## 0.4.0 (2026-11-16)
 
 - **Workshop tools**: **Select** (V), **Move** (M) with arrows along X, Y and Z, and **Rotate** (R) with rings about X, Y and Z in 90° steps. Each drag is one undo step.

@@ -18,6 +18,8 @@ export interface ViewOptions {
   cameraRev: number
   /** Placement under the pointer, for the name tooltip. */
   hovered: string | null
+  /** Show modules attached to DeckPort sockets. */
+  modules: boolean
   /** Workshop tool: select only, move along X/Y/Z, or rotate about X/Y/Z. */
   tool: 'select' | 'move' | 'rotate'
 }
@@ -37,5 +39,6 @@ export const useView = create<ViewState>(set => ({
   cameraRev: 0,
   hovered: null,
   tool: 'select',
+  modules: true,
   set: patch => set(patch),
 }))

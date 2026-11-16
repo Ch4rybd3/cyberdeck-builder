@@ -18,6 +18,26 @@ Add a **DeckPort** accessory to any face of the Core (Outline → Accessories �
 - gets a VBUS wire from the Core's 5 V converter on the Wiring page,
 - adds a DeckPort connector to the Shopping list.
 
+## Attaching a module to a Core
+
+Once a module exists in your library, mount it on a socket of your Core:
+
+1. Open the Core and select its **DeckPort** accessory (Outline → Accessories).
+2. Under **Attached module**, pick the module.
+
+![Wayfarer with the SDR module attached to its right socket](./images/module-attached.png)
+
+From then on:
+
+- the module is drawn **mounted on the socket**, plug face against socket face, and follows the lid if the socket is on a hinged lid. Toggle **Modules** in the toolbar to hide it. **Explode** pulls it away from the socket;
+- its draw (the sum of its loads) is a **load on the Core's 5 V rail** in the Power page, so the Core's converter and battery life account for it;
+- the Checks list warns when the module peaks above the socket's **15 W**, or implements a different **major DeckPort version** than the Core;
+- the Core's DeckID lists its modules.
+
+![The module pulled away from its socket in the exploded view](./images/module-exploded.png)
+
+The module stays its own build: **Open the module to edit it** switches to it, and the Core picks up the change. The module's pieces are not part of the Core's Print page or Shopping list; print and buy them from the module's own build.
+
 ## Workflow: build the Core now, modules later
 
 Print and assemble your Core with one or two sockets. Months later, design a module against DeckPort 1.0: it fits without touching the Core. Keep each module as its own build in the library, and link it to its Core in the DeckID.

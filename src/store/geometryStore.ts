@@ -4,34 +4,43 @@
  * serialisable and never part of undo history.
  *
  * Only the latest request matters: while one build is being generated, newer
- * changes replace the queued one instead of piling up.
+ * changes replace the queued one instead of piling up. Modules attached to
+ * the build's DeckPort sockets are generated with it.
  */
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { create } from 'zustand'
 
 import type { Build } from '../domain/schema'
+import { attachModules, modulesFor, type AttachedModule } from '../geometry/attach'
 import { generateCase, type GeometryResult } from '../geometry/caseBuilder'
 import { loadKernel } from '../geometry/kernel'
+import { loadFonts } from '../geometry/text'
 import type { WorkerResponse } from '../geometry/worker'
 import { useBuild } from './buildStore'
 
 interface GeoState {
   result: GeometryResult | null
+  attached: AttachedModule[]
   error: string | null
   busy: boolean
   /** Build revision the result belongs to. */
   forBuild: string | null
 }
 
-export const useGeometry = create<GeoState>(() => ({ result: null, error: null, busy: false, forBuild: null }))
+export const useGeometry = create<GeoState>(() => ({ result: null, attached: [], error: null, busy: false, forBuild: null }))
 
 const rev = (b: Build) => `${b.id}@${b.updatedAt}`
+
+interface Job {
+  build: Build
+  modules: Build[]
+}
 
 let worker: Worker | null = null
 let nextId = 1
 let inFlight: { id: number; rev: string } | null = null
-let queued: Build | null = null
-let latest: Build | null = null
+let queued: Job | null = null
+let latest: Job | null = null
 
 function startWorker(): Worker | null {
   if (worker || typeof Worker === 'undefined') return worker
@@ -41,13 +50,13 @@ function startWorker(): Worker | null {
       const done = inFlight
       inFlight = null
       if (done && e.data.id === done.id) {
-        if (e.data.result) useGeometry.setState({ result: e.data.result, error: null, forBuild: done.rev })
+        if (e.data.result) useGeometry.setState({ result: e.data.result, attached: e.data.attached ?? [], error: null, forBuild: done.rev })
         else useGeometry.setState({ error: e.data.error ?? 'Geometry failed' })
       }
       if (queued) {
-        const b = queued
+        const j = queued
         queued = null
-        send(b)
+        send(j)
       } else useGeometry.setState({ busy: false })
     }
     worker.onerror = () => {
@@ -63,38 +72,50 @@ function startWorker(): Worker | null {
   return worker
 }
 
-function send(build: Build) {
+function send(job: Job) {
   const w = startWorker()
-  if (!w) return runInline(build)
-  inFlight = { id: nextId++, rev: rev(build) }
-  w.postMessage({ id: inFlight.id, build })
+  if (!w) return runInline(job)
+  inFlight = { id: nextId++, rev: rev(job.build) }
+  w.postMessage({ id: inFlight.id, build: job.build, modules: job.modules })
 }
 
 let inlineTimer: ReturnType<typeof setTimeout> | undefined
-function runInline(build: Build) {
+function runInline(job: Job) {
   clearTimeout(inlineTimer)
   inlineTimer = setTimeout(async () => {
     try {
-      const wasm = await loadKernel()
-      useGeometry.setState({ result: generateCase(wasm, build), error: null, busy: false, forBuild: rev(build) })
+      const [wasm] = await Promise.all([loadKernel(), loadFonts()])
+      const attached = attachModules(wasm, job.build, job.modules)
+      useGeometry.setState({ result: generateCase(wasm, job.build), attached, error: null, busy: false, forBuild: rev(job.build) })
     } catch (e) {
       useGeometry.setState({ error: e instanceof Error ? e.message : String(e), busy: false })
     }
   }, 120)
 }
 
-function schedule(build: Build) {
-  latest = build
+function schedule(job: Job) {
+  latest = job
   useGeometry.setState({ busy: true })
-  if (inFlight) queued = build
-  else send(build)
+  if (inFlight) queued = job
+  else send(job)
 }
 
-/** Mount once near the root: keeps geometry in sync with the open build. */
+/** The library modules attached to the open build's DeckPort sockets. */
+export function useAttachedModules(): Build[] {
+  const build = useBuild(s => s.build)
+  const library = useBuild(s => s.library)
+  return useMemo(() => modulesFor(build, library), [build, library])
+}
+
+/** Mount once near the root: keeps geometry in sync with the open build and its modules. */
 export function useGeometrySync() {
   const build = useBuild(s => s.build)
   const ready = useBuild(s => s.ready)
+  const modules = useAttachedModules()
+  const modulesKey = modules.map(rev).join('|')
   useEffect(() => {
-    if (ready) schedule(build)
-  }, [build, ready])
+    if (ready) schedule({ build, modules })
+    // modulesKey stands for `modules`: regenerate when an attached module changes, not on every library write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [build, ready, modulesKey])
 }

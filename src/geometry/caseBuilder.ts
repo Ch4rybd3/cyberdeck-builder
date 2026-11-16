@@ -39,6 +39,7 @@ import {
 import { BED_MARGIN, printerById } from '../domain/printers'
 import type { Accessory, Build, Feature, PartId, Shape } from '../domain/schema'
 import { Scope } from './kernel'
+import { fontsReady, textContours } from './text'
 
 // ── Output ───────────────────────────────────────────────────────────────────
 
@@ -192,7 +193,7 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     return s.keep(core.offset(rr, 'Round'))
   }
 
-  const shapeCS = (shape: Shape): CrossSection => {
+  const shapeCS = (shape: Shape): CrossSection | null => {
     switch (shape.kind) {
       case 'rect':
         return rrect(shape.w, shape.h, shape.r ?? 0)
@@ -210,6 +211,14 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
       }
       case 'polygon':
         return s.keep(CS.ofPolygons([shape.points as Vec2[]]))
+      case 'text': {
+        const contours = textContours(shape.text, shape.size, shape.font ?? 'mono')
+        if (!contours) {
+          issues.push({ severity: 'info', message: fontsReady(shape.font ?? 'mono') ? `Text “${shape.text}” has no printable glyphs.` : 'Fonts are still loading; text labels appear on the next rebuild.' })
+          return null
+        }
+        return s.keep(CS.ofPolygons(contours as Vec2[][], 'NonZero'))
+      }
     }
   }
 
@@ -403,7 +412,9 @@ export function generateCase(wasm: ManifoldToplevel, build: Build): GeometryResu
     const f = faceFrame(p, part, feat.face)
     const partColor = colors[part]
     const pat = feat.pattern ?? { nu: 1, nv: 1, du: 0, dv: 0 }
-    let base = shapeCS(feat.shape)
+    const sketch = shapeCS(feat.shape)
+    if (!sketch) return
+    let base = sketch
     if (feat.rotation) base = s.keep(base.rotate(feat.rotation))
     for (let i = 0; i < pat.nu; i++) {
       for (let j = 0; j < pat.nv; j++) {

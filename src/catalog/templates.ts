@@ -172,7 +172,8 @@ export function exampleBuilds(): Build[] {
     feat({ name: 'Side vents', part: 'tray', face: 'left', op: 'cut', shape: { kind: 'slot', w: 30, h: 4 }, u: -50, v: 2, depth: 0, pattern: { nu: 1, nv: 4, du: 0, dv: 6 } }),
     feat({ name: 'Accent stripe', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'rect', w: 290, h: 4, r: 2 }, u: 0, v: 104, depth: 0.6, color: '#2DD4BF' }),
   ]
-  field.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: 0, v: 0, length: 40, rotation: 0 })
+  field.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'right', u: 0, v: 0, length: 40, rotation: 0, moduleId: 'example-sdr-module' })
+  field.features.push(feat({ name: 'Codename', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'text', text: 'WFR-01', size: 7, font: 'mono' }, u: -95, v: 50, depth: 0.6, color: '#2DD4BF' }))
 
   const scout = newBuild('handheld', 'Scout')
   scout.id = 'example-scout'
@@ -220,6 +221,7 @@ export function exampleBuilds(): Build[] {
   const slider = vanguard.accessories.find(a => a.kind === 'slider')!
   slider.targetId = vDisplay.id
   vanguard.accessories.push({ id: uid('acc'), kind: 'deckport', part: 'tray', face: 'back', u: -60, v: 0, length: 40, rotation: 0 })
+  vanguard.features.push(feat({ name: 'Front label', part: 'tray', face: 'front', op: 'inlay', shape: { kind: 'text', text: 'VGD-03', size: 7, font: 'mono' }, u: 0, v: 0, depth: 0.6, color: '#D64541' }))
   vanguard.features.push(feat({ name: 'Bottom vents', part: 'tray', face: 'bottom', op: 'cut', shape: { kind: 'slot', w: 50, h: 3 }, u: -95, v: -60, depth: 0, pattern: { nu: 1, nv: 6, du: 0, dv: 7 } }))
 
   // Briefcase: laptop-style clamshell on a hinge.

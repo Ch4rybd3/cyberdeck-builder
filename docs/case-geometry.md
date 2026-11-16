@@ -41,6 +41,15 @@ Every operation extrudes a 2D sketch:
 - **Circle**: diameter.
 - **Slot**: length and width, with rounded ends. Good for vents.
 - **Polygon**: a list of `u,v` points.
+- **Text**: a label in JetBrains Mono Bold or IBM Plex Sans SemiBold (the Remora fonts). *Cap height* sets its size in mm.
+
+### Text labels
+
+Text works with every operation. **Inlay** prints the letters in a second colour flush with the surface. **Cut** with a depth of 0.6 mm engraves them, and **Extrude** embosses them. Outline → Geometry → + offers *Text label (inlay)* and *Engraved text* as starting points.
+
+![An inlaid label on the front of the Vanguard tray](./images/text-label.png)
+
+Keep the cap height at **4 mm or more** on a 0.4 mm nozzle: strokes thinner than about 0.8 mm do not print. Labels read correctly from outside the face they are on. On the lid top, which prints upside down, an inlay prints in the first layers, so it is crisp and needs a single filament swap on a single-extruder printer.
 
 ### Placement on the face
 

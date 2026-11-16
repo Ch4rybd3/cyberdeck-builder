@@ -138,6 +138,19 @@ await view({ tool: 'rotate' })
 await shot('tool-rotate', 'viewport')
 await view({ tool: 'select', lid: 'ghost' })
 
+// ── Modules and text ──
+await open('', 'example-wayfarer')
+await select({ kind: 'accessory', id: await accessoryId('deckport') })
+await view({ lid: 'solid', camera: 'iso' })
+await shot('module-attached')
+await view({ explode: 0.7 })
+await shot('module-exploded', 'viewport')
+await view({ explode: 0 })
+await open('', 'example-vanguard')
+await view({ lid: 'solid', camera: 'front', cameraRev: Date.now() })
+await shot('text-label', 'viewport')
+await view({ camera: 'iso' })
+
 // ── Custom component editor ──
 await open('', 'example-wayfarer')
 await page.evaluate(() => document.querySelector('button[title="New custom component"]')?.click())

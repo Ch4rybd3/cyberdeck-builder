@@ -8,7 +8,7 @@ import { componentById } from '../catalog/components'
 import { analysePower, fmt } from '../domain/power'
 import type { Identity } from '../domain/schema'
 import { useBuild } from '../store/buildStore'
-import { useGeometry } from '../store/geometryStore'
+import { useAttachedModules, useGeometry } from '../store/geometryStore'
 import { Camera, Trash2 } from '../ui/icons'
 import { Panel, PanelHeader, PageShell, SelectField, Tag, TextField } from '../ui/primitives'
 
@@ -18,6 +18,7 @@ export function IdentityPage() {
   const build = useBuild(s => s.build)
   const update = useBuild(s => s.update)
   const geo = useGeometry(s => s.result)
+  const modules = useAttachedModules()
   const fileRef = useRef<HTMLInputElement>(null)
   const id = build.identity
   const set = <K extends keyof Identity>(k: K, v: Identity[K]) => update(b => void (b.identity[k] = v), { coalesce: `id.${k}` })
@@ -41,8 +42,9 @@ export function IdentityPage() {
       battery: power.battery.count ? `${fmt(power.battery.wh)} Wh` : 'External',
       runtime: power.autonomyTypH ? `${fmt(power.autonomyTypH)} h typical` : '—',
       sockets: build.accessories.filter(a => a.kind === 'deckport').length,
+      modules: modules.map(m => m.name).join(', ') || '—',
     }
-  }, [build, geo])
+  }, [build, geo, modules])
 
   const onPhoto = (file: File) => {
     const reader = new FileReader()
@@ -113,6 +115,7 @@ export function IdentityPage() {
                     ['Battery', facts.battery],
                     ['Runtime', facts.runtime],
                     ['DeckPort sockets', String(facts.sockets)],
+                    ...(build.kind === 'core' ? [['Modules', facts.modules]] : []),
                   ].map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="label mb-0 pt-0.5">{k}</dt>

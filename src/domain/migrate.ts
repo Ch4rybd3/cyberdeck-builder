@@ -32,6 +32,11 @@ export function migrate(raw: unknown): { build: Build | null; error?: string } {
     obj.schemaVersion = 4
     v = 4
   }
+  // 4 → 5: text shapes, and modules attached to DeckPort sockets (both optional).
+  if (v === 4) {
+    obj.schemaVersion = 5
+    v = 5
+  }
   const parsed = Build.safeParse(obj)
   if (!parsed.success) {
     const first = parsed.error.issues[0]

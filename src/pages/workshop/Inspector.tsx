@@ -10,7 +10,8 @@ import { ComponentEditor } from './ComponentEditor'
 import { useState } from 'react'
 import { CATEGORY_DATA_SLOT, PORT_LABEL, type PortType } from '../../catalog/types'
 import { TEMPLATES } from '../../catalog/templates'
-import { SOCKET } from '../../domain/deckport'
+import { SOCKET, SOCKET_MAX_W } from '../../domain/deckport'
+import { fmt, moduleDraw } from '../../domain/power'
 import { sliderGeometry } from '../../geometry/caseBuilder'
 import { faceSize } from '../../domain/layout'
 import { FACES, type Accessory, type Build, type Feature, type Quarter, type Shape } from '../../domain/schema'
@@ -301,6 +302,7 @@ const SHAPE_DEFAULTS: Record<Shape['kind'], Shape> = {
   circle: { kind: 'circle', d: 10 },
   slot: { kind: 'slot', w: 30, h: 4 },
   polygon: { kind: 'polygon', points: [[-10, -8], [10, -8], [0, 10]] },
+  text: { kind: 'text', text: 'COM', size: 6, font: 'mono' },
 }
 
 function FeatureInspector({ feature }: { feature: Feature }) {
@@ -381,8 +383,27 @@ function FeatureInspector({ feature }: { feature: Feature }) {
               { value: 'circle', label: 'Circle' },
               { value: 'slot', label: 'Slot' },
               { value: 'polygon', label: 'Polygon' },
+              { value: 'text', label: 'Text' },
             ]}
           />
+          {sh.kind === 'text' && (
+            <>
+              <TextField label="Text" value={sh.text} onChange={v => v && set('text', t => void (t.shape.kind === 'text' && (t.shape.text = v.slice(0, 64))))} />
+              <Grid2>
+                <NumberField label="Cap height" unit="mm" step={0.5} value={sh.size} min={1.5} onChange={v => set('size', t => void (t.shape.kind === 'text' && (t.shape.size = v)))} />
+                <SelectField
+                  label="Font"
+                  value={sh.font ?? 'mono'}
+                  options={[
+                    { value: 'mono', label: 'JetBrains Mono Bold' },
+                    { value: 'sans', label: 'IBM Plex Sans SemiBold' },
+                  ]}
+                  onChange={v => set('font', t => void (t.shape.kind === 'text' && (t.shape.font = v)))}
+                />
+              </Grid2>
+              <p className="text-label text-fg-muted">Keep the cap height at 4 mm or more for engraved or inlaid text on a 0.4 mm nozzle; strokes thinner than 0.8 mm do not print.</p>
+            </>
+          )}
           {sh.kind === 'rect' && (
             <Grid2>
               <NumberField label="Width" unit="mm" value={sh.w} min={0.2} onChange={v => set('w', t => void (t.shape.kind === 'rect' && (t.shape.w = v)))} />
@@ -445,6 +466,47 @@ const ACC_LABEL: Record<Accessory['kind'], string> = {
   handle: 'Handle',
   foot: 'Foot',
   deckport: 'DeckPort',
+}
+
+/** A Core socket: pick a library module to mount on it, see what it draws. */
+function ModuleSocket({ acc }: { acc: Accessory }) {
+  const library = useBuild(s => s.library)
+  const edit = useEdit()
+  const open = useBuild(s => s.open)
+  const modules = library.filter(b => b.kind === 'module')
+  const current = modules.find(m => m.id === acc.moduleId)
+  const draw = current ? moduleDraw(current) : null
+  return (
+    <Section title="Attached module" numeral="02">
+      <div className="space-y-2">
+        <SelectField
+          label="Module"
+          value={acc.moduleId ?? ''}
+          options={[{ value: '', label: modules.length ? 'None' : 'No module in the library yet' }, ...modules.map(m => ({ value: m.id, label: `${m.name}${m.identity.codename ? ` · ${m.identity.codename}` : ''}` }))]}
+          onChange={v =>
+            edit(`acc.${acc.id}.module`, b => {
+              const t = b.accessories.find(q => q.id === acc.id)
+              if (t) t.moduleId = v || undefined
+            })
+          }
+          hint="Shown mounted on this socket in the viewport; its draw counts in this Core's power budget."
+        />
+        {current && draw && (
+          <>
+            <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-ui">
+              <dt className="text-fg-muted">Draw on VBUS</dt>
+              <dd className={`font-mono ${draw.peakW > SOCKET_MAX_W ? 'text-severity-high' : 'text-fg'}`}>{fmt(draw.typW)} W typ · {fmt(draw.peakW)} W peak / {SOCKET_MAX_W} W</dd>
+              <dt className="text-fg-muted">DeckPort</dt>
+              <dd className="font-mono text-fg">{current.deckport}</dd>
+              <dt className="text-fg-muted">Size</dt>
+              <dd className="font-mono text-fg">{current.case.params.width} × {current.case.params.depth} × {current.case.params.trayHeight + current.case.params.lidHeight} mm</dd>
+            </dl>
+            <button className="btn-secondary w-full" onClick={() => open(current.id)}>Open the module to edit it</button>
+          </>
+        )}
+      </div>
+    </Section>
+  )
 }
 
 function SliderInspector({ acc }: { acc: Accessory }) {
@@ -565,7 +627,8 @@ function AccessoryInspectorBody({ acc }: { acc: Accessory }) {
           {!isPort && <ColorField label="Colour" value={acc.color ?? build.case.colors.accessories} onChange={v => set('color', t => void (t.color = v))} />}
         </div>
       </Section>
-      <Section title="How it attaches" numeral="02">
+      {isPort && build.kind === 'core' && <ModuleSocket acc={acc} />}
+      <Section title="How it attaches" numeral={isPort && build.kind === 'core' ? '03' : '02'}>
         <p className="text-ui text-fg-secondary">
           {isPort
             ? build.kind === 'module'

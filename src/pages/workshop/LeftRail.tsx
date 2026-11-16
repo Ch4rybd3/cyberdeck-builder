@@ -120,6 +120,8 @@ const FEATURE_PRESETS: FeaturePreset[] = [
   { label: 'Rectangular cut-out', make: () => ({ name: 'Cut-out', part: 'tray', face: 'front', op: 'cut', shape: { kind: 'rect', w: 20, h: 8, r: 1 }, u: 0, v: 0, depth: 0, rotation: 0, enabled: true }) },
   { label: 'Extruded pad', make: () => ({ name: 'Pad', part: 'lid', face: 'top', op: 'extrude', shape: { kind: 'rect', w: 40, h: 20, r: 3 }, u: 0, v: 0, depth: 2, rotation: 0, enabled: true }) },
   { label: 'Colour inlay', make: b => ({ name: 'Inlay', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'rect', w: 60, h: 6, r: 3 }, u: 0, v: 0, depth: 0.6, rotation: 0, color: b.case.colors.accessories, enabled: true }) },
+  { label: 'Text label (inlay)', make: b => ({ name: 'Label', part: 'lid', face: 'top', op: 'inlay', shape: { kind: 'text', text: 'COM', size: 6, font: 'mono' }, u: 0, v: 0, depth: 0.6, rotation: 0, color: b.case.colors.accessories, enabled: true }) },
+  { label: 'Engraved text', make: () => ({ name: 'Engraving', part: 'tray', face: 'front', op: 'cut', shape: { kind: 'text', text: 'GPIO', size: 5, font: 'mono' }, u: 0, v: 0, depth: 0.6, rotation: 0, enabled: true }) },
   { label: 'Internal boss', make: () => ({ name: 'Boss', part: 'tray', face: 'bottom', op: 'boss', shape: { kind: 'circle', d: 8 }, u: 0, v: 0, depth: 6, rotation: 0, enabled: true }) },
 ]
 

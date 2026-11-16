@@ -2,14 +2,15 @@ import { useMemo } from 'react'
 
 import { checkBuild, SEVERITY_ORDER, type Issue } from '../../domain/constraints'
 import { useBuild } from '../../store/buildStore'
-import { useGeometry } from '../../store/geometryStore'
+import { useAttachedModules, useGeometry } from '../../store/geometryStore'
 import { Check } from '../../ui/icons'
 import { EmptyState, SeverityBadge } from '../../ui/primitives'
 
 export function useChecks(): Issue[] {
   const build = useBuild(s => s.build)
   const geo = useGeometry(s => s.result)
-  return useMemo(() => checkBuild(build, geo), [build, geo])
+  const modules = useAttachedModules()
+  return useMemo(() => checkBuild(build, geo, modules), [build, geo, modules])
 }
 
 const CATEGORY_LABEL: Record<Issue['category'], string> = {
