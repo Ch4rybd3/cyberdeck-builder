@@ -1,0 +1,17 @@
+name: Catalog component
+description: Propose a part for the built-in catalog.
+labels: [catalog]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Part name and product URL
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Data
+      description: Envelope (mm), mass, mounting holes, windows, power draw and ports, from the datasheet. Exporting it as a custom component and attaching the build file is the easiest way.
+    validations:
+      required: true

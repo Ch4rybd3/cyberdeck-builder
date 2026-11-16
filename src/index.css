@@ -1,0 +1,233 @@
+@import './styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: rgb(var(--surface-canvas));
+    color: rgb(var(--text-primary));
+    font-family: var(--font-sans);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: rgb(var(--surface-canvas)); }
+  ::-webkit-scrollbar-thumb  { background: rgb(var(--text-muted) / 0.4); border-radius: var(--radius-pill); }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--text-muted) / 0.7); }
+
+  ::selection { background: rgb(var(--accent) / 0.2); }
+}
+
+@layer components {
+  /* ── Surfaces ─────────────────────────────────────────────────────────────
+     A panel is square and defined by a hairline. There is no card fill and no
+     shadow: stacking a border, a background shift and a shadow is three
+     signals for one idea, and it is most of what made the old interface feel
+     improvised. Shadows exist only on genuinely floating layers. */
+  .panel {
+    @apply bg-panel border border-hairline;
+  }
+
+  /* Deprecated alias for .panel, kept until the last `card` call site is gone. */
+  .card {
+    @apply bg-panel border border-hairline;
+  }
+
+  .overlay-surface {
+    @apply bg-overlay border border-hairline shadow-overlay;
+  }
+
+  /* A hairline used as a horizontal rule between blocks in a rail or a
+     sidebar — the treatment that replaces nesting boxes inside boxes. */
+  .rule {
+    @apply border-t border-hairline;
+  }
+
+  /* ── Controls ─────────────────────────────────────────────────────────────
+     The only elements that carry a radius, and it is 2px. */
+  .btn-primary {
+    @apply bg-accent text-accent-contrast font-medium px-3 py-1.5 rounded-control
+           text-ui hover:bg-accent-hover transition-colors
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-fg-secondary border border-hairline px-3 py-1.5 rounded-control
+           text-ui hover:text-fg hover:border-strong transition-colors
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus;
+  }
+
+  /* For toolbars. A row of five bordered buttons has no hierarchy; ghosts
+     recede so the one primary action is visible. */
+  .btn-ghost {
+    @apply bg-transparent text-fg-secondary px-2 py-1.5 rounded-control
+           text-ui hover:text-fg hover:bg-hover transition-colors
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus;
+  }
+
+  .btn-danger {
+    @apply bg-transparent text-severity-critical border border-severity-critical/30
+           px-3 py-1.5 rounded-control text-ui
+           hover:bg-severity-critical/10 transition-colors
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-severity-critical;
+  }
+
+  /* Groups related actions and keeps the primary one distinguishable. */
+  .toolbar {
+    @apply flex items-center gap-1;
+  }
+  .toolbar-group {
+    @apply flex items-center gap-0.5 pr-2 mr-1 border-r border-hairline last:border-r-0 last:pr-0 last:mr-0;
+  }
+
+  .input {
+    @apply w-full bg-canvas border border-hairline rounded-control px-2.5 py-1.5
+           text-fg text-ui placeholder-fg-muted
+           focus:outline-none focus:border-focus transition-colors;
+  }
+
+  /* ── Borderless editor ────────────────────────────────────────────────────
+     The section is the container. A text field that draws its own frame inside
+     a section that already has one puts four frames around one paragraph. */
+  .field {
+    @apply w-full bg-transparent border-0 p-0 text-fg text-prose
+           placeholder-fg-muted focus:outline-none resize-none;
+  }
+
+  .label {
+    @apply block text-label font-mono uppercase tracking-label text-fg-muted mb-1;
+  }
+
+  .tab-active {
+    @apply border-b border-accent text-accent;
+  }
+
+  .tab-inactive {
+    @apply border-b border-transparent text-fg-secondary hover:text-fg hover:border-hairline;
+  }
+
+  /* A section marker. Sections are numbered in mono, not coloured — inventing
+     a hue per section makes the colour mean nothing and fights the accent. */
+  .numeral {
+    @apply font-mono text-label text-fg-muted tabular-nums;
+  }
+}
+
+/* ── React Flow ─────────────────────────────────────────────────────────────── */
+/* ReactFlow reads these from `.react-flow`. Left at their defaults the edges are
+   a grey that belongs to no palette here, and the connection line while dragging
+   likewise. Setting them keeps every canvas on the Remora theme, including the
+   built-in edge types this project does not override. */
+.react-flow {
+  --xy-background-color: rgb(var(--surface-canvas));
+  --xy-node-background-color: transparent;
+  --xy-edge-stroke: rgb(var(--accent) / 0.45);
+  --xy-edge-stroke-selected: rgb(var(--accent));
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: rgb(var(--accent) / 0.6);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-attribution-background-color: transparent;
+}
+
+/* ── React Flow controls & minimap ──────────────────────────────────────────── */
+.react-flow__controls {
+  background: rgb(var(--surface-overlay)) !important;
+  border: 1px solid rgb(var(--border-hairline)) !important;
+  border-radius: var(--radius-control) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-overlay) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgb(var(--border-hairline)) !important;
+  color: rgb(var(--text-secondary)) !important;
+  fill: rgb(var(--text-secondary)) !important;
+  transition: background 0.15s, fill 0.15s !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgb(var(--accent) / 0.08) !important;
+  fill: rgb(var(--accent)) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: inherit !important;
+}
+
+.react-flow__minimap {
+  background: rgb(var(--surface-overlay)) !important;
+  border: 1px solid rgb(var(--border-hairline)) !important;
+  border-radius: var(--radius-control) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-overlay) !important;
+}
+
+/* ── Rendered markdown (documentation pages) ─────────────────────────────── */
+.md-preview {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  color: rgb(var(--text-primary));
+}
+.md-preview h1 { font-size: var(--text-title); line-height: var(--leading-title); font-weight: 600; margin: 0 0 0.75rem; }
+.md-preview h2 { font-size: var(--text-prose); font-weight: 600; margin: 1.75rem 0 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid rgb(var(--border-hairline)); }
+.md-preview h3 { font-size: var(--text-ui); font-weight: 600; color: rgb(var(--text-secondary)); margin: 1.25rem 0 0.4rem; text-transform: uppercase; letter-spacing: var(--tracking-label); font-family: var(--font-mono); }
+.md-preview p { margin: 0.5rem 0; }
+.md-preview ul, .md-preview ol { padding-left: 1.4rem; margin: 0.4rem 0; }
+.md-preview ul li { list-style-type: disc; }
+.md-preview ol li { list-style-type: decimal; }
+.md-preview li { margin: 0.15rem 0; }
+.md-preview a { color: rgb(var(--accent)); text-decoration: underline; text-underline-offset: 2px; }
+.md-preview code {
+  background: rgb(var(--text-muted) / 0.14); color: rgb(var(--accent));
+  font-family: var(--font-mono); font-size: 0.88em; padding: 0.1em 0.35em; border-radius: var(--radius-control);
+}
+.md-preview pre {
+  white-space: pre-wrap; background: rgb(var(--surface-canvas)); border: 1px solid rgb(var(--border-hairline));
+  border-radius: var(--radius-control); padding: 0.6rem 0.8rem; margin: 0.6rem 0;
+}
+.md-preview pre code { background: none; padding: 0; color: rgb(var(--text-secondary)); font-size: var(--text-ui); }
+.md-preview table { display: block; width: 100%; overflow-x: auto; border-collapse: collapse; margin: 0.6rem 0; font-size: var(--text-ui); }
+.md-preview th, .md-preview td { border: 1px solid rgb(var(--border-hairline)); padding: 0.3rem 0.6rem; text-align: left; }
+.md-preview th { color: rgb(var(--text-secondary)); font-weight: 600; background: rgb(var(--surface-panel)); }
+.md-preview blockquote { border-left: 2px solid rgb(var(--accent) / 0.4); padding-left: 0.75rem; color: rgb(var(--text-secondary)); margin: 0.6rem 0; }
+.md-preview hr { border: none; border-top: 1px solid rgb(var(--border-hairline)); margin: 1rem 0; }
+
+/* Numeric inputs in dense inspectors: no spinner chrome. */
+input[type='number'].input::-webkit-inner-spin-button,
+input[type='number'].input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type='number'].input { -moz-appearance: textfield; }
+
+@layer components {
+  /* Table header cell: the label treatment without .label's block display. */
+  .th {
+    @apply text-label font-mono uppercase tracking-label text-fg-muted font-normal text-left px-4 py-2 border-b border-hairline whitespace-nowrap;
+  }
+}

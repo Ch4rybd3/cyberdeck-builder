@@ -1,0 +1,52 @@
+{
+  "name": "cyberdeck-builder",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc -b",
+    "screenshots": "node scripts/screenshots.mjs",
+    "lint": "eslint src --max-warnings 0",
+    "check": "npm run lint && npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@xyflow/react": "^12.12.1",
+    "fflate": "^0.8.3",
+    "idb-keyval": "^6.3.0",
+    "lucide-react": "^0.468.0",
+    "lz-string": "^1.5.0",
+    "manifold-3d": "^3.5.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.1.0",
+    "react-router-dom": "^7.18.5",
+    "remark-gfm": "^4.0.1",
+    "three": "^0.170.0",
+    "zod": "^3.25.76",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.170.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.6.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "postcss": "^8.5.33",
+    "puppeteer-core": "^23.11.1",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^6.4.6",
+    "vitest": "^2.1.9"
+  }
+}
